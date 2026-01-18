@@ -116,6 +116,9 @@ std::string StackArg::emit(const EmitOptions& options) const {
 }
 
 std::string Memory::emit(const EmitOptions& options) const {
+  if (options.livenessAnalysis) {
+    return reg->emit(options); 
+  }
   
   std::string offsetString = offset->emit().substr(1);
   std::string regString = reg->emit();

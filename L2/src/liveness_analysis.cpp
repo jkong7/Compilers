@@ -10,7 +10,15 @@ using namespace std;
 namespace L2{
 
     bool LivenessAnalysisBehavior::isLivenessContributor(const Item* var) {
-        return var->kind() == ItemType::RegisterItem || var->kind() == ItemType::VariableItem;
+        return var->kind() == ItemType::RegisterItem || var->kind() == ItemType::VariableItem || var->kind() == ItemType::MemoryItem;
+    }
+
+    void LivenessAnalysisBehavior::print_instruction_gen_kill(size_t cur_i, const livenessSets& ls) {
+    std::cout << "gen set: " << cur_i << ":\n";
+    for (const auto &s : ls.gen) std::cout << s << "\n";
+
+    std::cout << "kill set: " << cur_i << ":\n";
+    for (const auto &s : ls.kill) std::cout << s << "\n";
     }
 
     void LivenessAnalysisBehavior::act(Program& p) {
@@ -35,15 +43,19 @@ namespace L2{
         options.livenessAnalysis = true; 
         if (isLivenessContributor(src)) {
             ls.gen.insert(src->emit(options));
-            std::cout << cur_i << ": " << "gen set: " << src->emit(options) << std::endl; 
         }
         if (isLivenessContributor(dst)) {
-            ls.kill.insert(dst->emit(options)); 
-            std::cout << cur_i << ": " << "kill set: " << dst->emit(options) << std::endl; 
+            if (dst->kind() == ItemType::MemoryItem) {
+                ls.gen.insert(dst->emit(options)); 
+            } else {
+                ls.kill.insert(dst->emit(options));
+            } 
         }
+        print_instruction_gen_kill(cur_i, ls); 
     }
 
     void LivenessAnalysisBehavior::act(Instruction_stack_arg_assignment& i) {
+        auto &ls = livenessData.back()[cur_i]; 
         
     }
 

@@ -52,6 +52,7 @@ namespace L2{
       virtual void act(Instruction_lea &i) override; 
 
       bool isLivenessContributor(const Item* var); 
+      void print_instruction_gen_kill(size_t cur_i, const livenessSets& ls); 
     private: 
       std::vector<std::vector<livenessSets>> livenessData; 
       size_t cur_i = 0; 
