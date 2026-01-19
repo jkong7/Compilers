@@ -54,16 +54,20 @@ namespace L2{
       virtual void act(Instruction_reg_inc_dec &i) override; 
       virtual void act(Instruction_lea &i) override; 
 
-      bool isLivenessContributor(const Item* var); 
-      void generate_in_out_sets(Program p);
-      void print_instruction_gen_kill(size_t cur_i, const livenessSets& ls); 
+      void print_instruction_gen_kill(size_t cur_i, const livenessSets& ls);
+      void print_in_out_sets();
 
-      void print_in_out_sets(); 
+      bool isLivenessContributor(const Item* var); 
+      bool isNoSuccessorInstruction(const Instruction* i);
+
+      void generate_in_out_sets(Program p); 
+ 
     private: 
       std::vector<std::vector<livenessSets>> livenessData; 
       std::vector<std::unordered_map<std::string, size_t>> labelMap; 
       size_t cur_i = 0; 
   }; 
+
 
     void analyze_liveness(Program p); 
 
