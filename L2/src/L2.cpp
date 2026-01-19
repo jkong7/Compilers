@@ -42,7 +42,7 @@ StackArg::StackArg(Number* n)
   }
 
 Memory::Memory (Item *v, Number *n)
-  : var {r}, offset {n} {
+  : var {v}, offset {n} {
     return; 
   }
 
@@ -117,11 +117,11 @@ std::string StackArg::emit(const EmitOptions& options) const {
 
 std::string Memory::emit(const EmitOptions& options) const {
   if (options.livenessAnalysis) {
-    return reg->emit(options); 
+    return var->emit(options); 
   }
   
   std::string offsetString = offset->emit().substr(1);
-  std::string regString = reg->emit();
+  std::string regString = var->emit();
   
   std::ostringstream s; 
   s << offsetString << "(" << regString << ")"; 

@@ -168,11 +168,33 @@ namespace L2{
     }
 
     void LivenessAnalysisBehavior::act(Instruction_ret& i) {
-        
+        auto &ls = livenessData.back()[cur_i];
+        std::unordered_set<string> callee_save_registers = {"r12", "r13", "r14", "r15", "rbp", "rbx"}; 
+        ls.gen.insert("rax"); 
+        ls.gen.insert(callee_save_registers.begin(), callee_save_registers.end()); 
+        print_instruction_gen_kill(cur_i, ls); 
     }
 
     void LivenessAnalysisBehavior::act(Instruction_call& i) {
-        
+        auto &ls = livenessData.back()[cur_i];
+        std::unordered_set<string> caller_save_registers = {"r10", "r11", "r8", "r9", "rax", "rcx", "rdi", "rdx", "rsi"}; 
+        ls.kill.insert(caller_save_registers.begin(), caller_save_registers.end());
+
+        std::vector<string> argument_registers = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+        if (i.callType() == CallType::l1) {
+            const Item* callee = i.callee();
+            if (isLivenessContributor(callee)) {
+                EmitOptions options; 
+                options.livenessAnalysis = true; 
+                ls.gen.insert(callee->emit(options));
+            }
+        }
+
+        int64_t num_args = i.nArgs()->value(); 
+        for (int argIndex = 0; argIndex < std::min(num_args, static_cast<int64_t>(6)); argIndex++) {
+            ls.gen.insert(argument_registers[argIndex]);
+        }
+        print_instruction_gen_kill(cur_i, ls);
     }
 
     void LivenessAnalysisBehavior::act(Instruction_reg_inc_dec& i) {
