@@ -254,33 +254,39 @@ namespace L2{
 
     void LivenessAnalysisBehavior::generate_in_out_sets(Program p) {
         for (int i = 0; i < (int)livenessData.size(); i++) {
+            bool change = true; 
             auto& functionInstructions = p.functions[i]->instructions; 
             auto& functionLivenessData = livenessData[i]; 
             auto& functionLabelMap = labelMap[i]; 
-            for (int j = (int)functionLivenessData.size()-1; j>=0; j--) {
-                livenessSets& ls = functionLivenessData[j];
-                Instruction* cur_instruction = functionInstructions[j];
-                if (isNoSuccessorInstruction(cur_instruction)) {
-                    // no successors, out is empty 
-                } else if (auto *gt = dynamic_cast<const Instruction_goto*>(cur_instruction)) {
-                    const std::string label = gt->label()->emit();
-                    size_t label_instruction_index = functionLabelMap[label]; 
-                    livenessSets& ls_label_instruction = functionLivenessData[label_instruction_index]; 
-                    ls.out = ls_label_instruction.in;
-                } else if (auto *cj = dynamic_cast<const Instruction_cjump*>(cur_instruction)) {
-                    const std::string label = cj->label()->emit();
-                    size_t label_instruction_index = functionLabelMap[label]; 
-                    livenessSets& ls_label_instruction = functionLivenessData[label_instruction_index]; 
-                    ls.out = ls_label_instruction.in;
+            while (change) {
+                for (int j = (int)functionLivenessData.size()-1; j>=0; j--) {
+                    livenessSets& ls = functionLivenessData[j];
+                    std::unordered_set<std::string> original_in = ls.in; 
+                    std::unordered_set<std::string> original_out = ls.out; 
+                    Instruction* cur_instruction = functionInstructions[j];
+                    if (isNoSuccessorInstruction(cur_instruction)) {
+                        // no successors, out is empty 
+                    } else if (auto *gt = dynamic_cast<const Instruction_goto*>(cur_instruction)) {
+                        const std::string label = gt->label()->emit();
+                        size_t label_instruction_index = functionLabelMap[label]; 
+                        livenessSets& ls_label_instruction = functionLivenessData[label_instruction_index]; 
+                        ls.out = ls_label_instruction.in;
+                    } else if (auto *cj = dynamic_cast<const Instruction_cjump*>(cur_instruction)) {
+                        const std::string label = cj->label()->emit();
+                        size_t label_instruction_index = functionLabelMap[label]; 
+                        livenessSets& ls_label_instruction = functionLivenessData[label_instruction_index]; 
+                        ls.out = ls_label_instruction.in;
 
-                    livenessSets& ls_next_inst = functionLivenessData[j+1];
-                    ls.out.insert(ls_next_inst.in.begin(), ls_next_inst.in.end()); 
-                } else {
-                    livenessSets& ls_next_inst = functionLivenessData[j+1]; 
-                    ls.out = ls_next_inst.in; 
+                        livenessSets& ls_next_inst = functionLivenessData[j+1];
+                        ls.out.insert(ls_next_inst.in.begin(), ls_next_inst.in.end()); 
+                    } else {
+                        livenessSets& ls_next_inst = functionLivenessData[j+1]; 
+                        ls.out = ls_next_inst.in; 
+                    }
+                    std::unordered_set out_kill_diff_set = set_difference(ls.out, ls.kill);
+                    ls.in = set_union(ls.gen, out_kill_diff_set);
+                    change = ls.in != original_in || ls.out != original_out; 
                 }
-                std::unordered_set out_kill_diff_set = set_difference(ls.out, ls.kill);
-                ls.in = set_union(ls.gen, out_kill_diff_set);
             }
         }
     }
