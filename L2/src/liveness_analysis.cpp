@@ -8,12 +8,17 @@
 
 namespace L2{
 
+    LivenessAnalysisBehavior::LivenessAnalysisBehavior(std::ofstream &out)
+    : out (out) {
+      return; 
+    }
+
     void LivenessAnalysisBehavior::act(Program& p) {
         for (Function *f: p.functions) {
             f->accept(*this); 
         }
         generate_in_out_sets(p);
-        print_in_out_sets();
+        write_to_file_in_out_sets();
     }
 
     void LivenessAnalysisBehavior::act(Function& f) {
@@ -320,8 +325,55 @@ namespace L2{
         }
     }
 
+    void LivenessAnalysisBehavior::write_paren_set(const std::unordered_set<std::string>& s) {
+        if (s.empty()) {
+            out << "()\n";
+            return;
+        }
+
+        // alphabetical order
+        std::vector<std::string> v(s.begin(), s.end());
+        std::sort(v.begin(), v.end());
+
+        out << "(";
+        for (size_t i = 0; i < v.size(); ++i) {
+            if (i) out << " ";
+            out << v[i];
+        }
+        out << ")\n";
+    }
+
+    void LivenessAnalysisBehavior::write_to_file_in_out_sets() {
+        const size_t f = 0;
+
+        out << "(\n";
+
+        out << "(in\n";
+        for (size_t i = 0; i < livenessData[f].size(); ++i) {
+            write_paren_set(livenessData[f][i].in);
+        }
+
+        out << ")\n\n";
+
+        out << "(out\n";
+        for (size_t i = 0; i < livenessData[f].size(); ++i) {
+            write_paren_set(livenessData[f][i].out);
+        }
+
+        out << ")\n\n";
+
+        out << ")\n";
+    }
+
     void analyze_liveness(Program p) {
-        LivenessAnalysisBehavior b;
+        std::ofstream outputFile; 
+        outputFile.open("prog.S"); 
+
+        LivenessAnalysisBehavior b(outputFile);
         p.accept(b); 
+
+        outputFile.close(); 
+
+        return;
     }
 }

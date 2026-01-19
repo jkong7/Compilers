@@ -38,6 +38,7 @@ namespace L2{
 
   class LivenessAnalysisBehavior : public Behavior {
     public: 
+      explicit LivenessAnalysisBehavior(std::ofstream &out);
       void act(Program& p) override; 
       void act(Function &f) override; 
       void act(Instruction_assignment &i) override; 
@@ -61,11 +62,16 @@ namespace L2{
       bool isNoSuccessorInstruction(const Instruction* i);
 
       void generate_in_out_sets(Program p); 
+
+      void write_paren_set(const std::unordered_set<std::string>& s);
+      void write_to_file_in_out_sets();
  
     private: 
       std::vector<std::vector<livenessSets>> livenessData; 
       std::vector<std::unordered_map<std::string, size_t>> labelMap; 
       size_t cur_i = 0; 
+
+      std::ofstream &out; 
   }; 
 
 
