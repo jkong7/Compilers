@@ -43,6 +43,7 @@ namespace L2{
     }
 
     void LivenessAnalysisBehavior::act(Function& f) {
+        cur_i = 0; 
         livenessData.emplace_back(f.instructions.size()); 
         for (Instruction *i: f.instructions) {
             i->accept(*this); 
