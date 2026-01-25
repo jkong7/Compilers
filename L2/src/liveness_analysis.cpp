@@ -16,21 +16,15 @@ namespace L2{
     void LivenessAnalysisBehavior::act(Program& p) { 
         initialize_containers(p.functions.size()); 
         for (int i = 0; i < p.functions.size(); i++) {
-            clear_function_containers(); 
-            p.functions[i]->accept(*this);
-            generate_in_out_sets(p);
-            generate_interference_graph(p);
-            cur_f++; 
-            /*
             while (true) {
+                clear_function_containers();
                 p.functions[i]->accept(*this);
-                generate_in_out_sets(p, i);
-                generate_interference_graph(p, i); 
-                if (color_graph(i)) break;
-                spill(i);
+                generate_in_out_sets(p);
+                generate_interference_graph(p);
+                if (color_graph()) break; 
+                spill(); 
             }
             cur_f++; 
-            */
         }
 
         //print_liveness_tests();
@@ -326,6 +320,8 @@ namespace L2{
     }
 
 
+
+
     void LivenessAnalysisBehavior::generate_interference_graph(const Program &p) {
         auto& functionInterferenceGraph = interferenceGraph[cur_f];  
         auto& functionLivenessData = livenessData[cur_f]; 
@@ -420,7 +416,7 @@ namespace L2{
         }
     } 
 
-    bool LivenessAnalysisBehavior::color_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors) {
+    bool LivenessAnalysisBehavior::color_or_spill_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors) {
         for (const auto& color : colorOrder) {
             bool found = true; 
             for (const auto& neigh : neighbors) {
@@ -434,7 +430,10 @@ namespace L2{
                 return false; 
             }
         }
-        spillOutputs[cur_f].insert(cur_node); 
+        bool isSpillTemp = cur_node.size() >= 2 && cur_node[1] == 'S'; 
+        if (!isSpillTemp) {
+            spillOutputs[cur_f].insert(cur_node);
+        } 
         return true; 
     }
 
@@ -446,7 +445,7 @@ namespace L2{
         while (!functionNodeStack.empty()) {
             std::string cur_node = functionNodeStack.back(); 
             functionNodeStack.pop_back(); 
-            if (color_node(cur_node, functionInterferenceGraph[cur_node])) {
+            if (color_or_spill_node(cur_node, functionInterferenceGraph[cur_node])) {
                 spill = true;
             } 
         }

@@ -75,7 +75,7 @@ namespace L2{
       void update_graph(const std::string &selected); 
       void select_nodes(); 
 
-      bool color_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors); 
+      bool color_or_spill_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors); 
       bool color_graph(); 
 
       void spill(); 
