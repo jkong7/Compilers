@@ -61,28 +61,33 @@ namespace L2{
       void print_liveness_tests();
       void print_interference_tests();
 
+      void initialize_containers(size_t n); 
+      void clear_function_containers();
+
       bool isLivenessContributor(const Item* var); 
       bool isNoSuccessorInstruction(const Instruction* i);
 
-      void generate_in_out_sets(const Program &p, size_t functionIndex); 
-      void generate_interference_graph(const Program &p, size_t functionIndex); 
+      void generate_in_out_sets(const Program &p); 
+      void generate_interference_graph(const Program &p); 
 
-      std::string pick_low_node(size_t functionIndex); 
-      std::string pick_high_node(size_t functionIndex); 
-      void update_graph(const std::string &selected, size_t functionIndex); 
-      void select_nodes(size_t functionIndex); 
+      std::string pick_low_node(); 
+      std::string pick_high_node(); 
+      void update_graph(const std::string &selected); 
+      void select_nodes(); 
 
-      bool color_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors, size_t functionIndex); 
-      bool color_graph(size_t functionIndex); 
+      bool color_node(const std::string &cur_node, const std::unordered_set<std::string> &neighbors); 
+      bool color_graph(); 
 
-      void spill(size_t functionIndex); 
+      void spill(); 
 
  
     private: 
+      size_t cur_f = 0; 
+      size_t cur_i = 0; 
+
       std::vector<std::vector<livenessSets>> livenessData; 
       std::vector<std::unordered_map<std::string, size_t>> labelMap; 
       std::vector<std::unordered_map<std::string, std::unordered_set<std::string>>> interferenceGraph; 
-      size_t cur_i = 0; 
 
       std::vector<std::unordered_map<std::string, size_t>> nodeDegrees; 
       std::vector<std::unordered_set<std::string>> removed_nodes; 
