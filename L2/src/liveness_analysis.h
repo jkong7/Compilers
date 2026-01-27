@@ -47,8 +47,11 @@ namespace L2{
       void initialize_containers(size_t n); 
       void clear_function_containers();
 
+      bool isVariable(const Item* var);
       bool isLivenessContributor(const Item* var); 
       bool isNoSuccessorInstruction(const Instruction* i);
+
+      void collectVar(const Item* var); 
 
       void generate_in_out_sets(const Program &p); 
       void generate_interference_graph(const Program &p); 
@@ -66,6 +69,8 @@ namespace L2{
       size_t cur_f = 0; 
       size_t cur_i = 0; 
 
+      std::vector<std::unordered_set<std::string>> variables; 
+
       std::vector<std::vector<livenessSets>> livenessData; 
       std::vector<std::unordered_map<std::string, size_t>> labelMap; 
       std::vector<std::unordered_map<std::string, std::unordered_set<std::string>>> interferenceGraph; 
@@ -73,14 +78,17 @@ namespace L2{
       std::vector<std::unordered_map<std::string, size_t>> nodeDegrees; 
       std::vector<std::unordered_set<std::string>> removed_nodes; 
       std::vector<std::vector<std::string>> node_stack; 
-
+ 
       std::vector<std::unordered_set<std::string>> spillOutputs; 
       std::vector<std::unordered_map<std::string, std::string>> colorOutputs; 
+
+      std::vector<size_t> tempCounters;
+      std::vector<size_t> locals; 
 
       std::ostream &out; 
   }; 
 
 
-    void analyze_liveness(Program p); 
+    void analyze_liveness(Program& p); 
 
 }

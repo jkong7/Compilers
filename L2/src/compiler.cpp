@@ -17,6 +17,7 @@
 #include <sstream>
 
 #include <parser.h>
+#include <behavior.h>
 #include <liveness_analysis.h>
 
 std::string read_file(const char *path) {
@@ -81,6 +82,7 @@ int main(
   /*
    * Parse the input file.
    */
+  
   std::string src = read_file(argv[optind]);
   src = "(@go\n" + src + ")";
 
@@ -88,7 +90,6 @@ int main(
   std::ofstream out(tmp);
   out << src;
   out.close();
-
   auto p = L2::parse_file((char*)tmp);
 
   /*

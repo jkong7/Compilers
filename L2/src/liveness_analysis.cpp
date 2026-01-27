@@ -4,7 +4,8 @@
 
 #include <liveness_analysis.h>
 
-
+// get variables for each function in gen/kill visitor iteration, add all vars to graph before doing pairs 
+// output of spill should be tempCounter + number of spills (gets # of locals, if we spill everything, we already know though)
 namespace L2{
 
     LivenessAnalysisBehavior::LivenessAnalysisBehavior(std::ostream &out)
@@ -15,14 +16,20 @@ namespace L2{
     void LivenessAnalysisBehavior::act(Program& p) { 
         initialize_containers(p.functions.size()); 
         for (int i = 0; i < p.functions.size(); i++) {
+            clear_function_containers();
+            p.functions[i]->accept(*this);
+            generate_in_out_sets(p);
+            generate_interference_graph(p);
+            /*
             while (true) {
                 clear_function_containers();
                 p.functions[i]->accept(*this);
                 generate_in_out_sets(p);
                 generate_interference_graph(p); // add all keys (a key might not have any interference neighbors??)
-                if (color_graph()) break; // so now we spilloutputs and coloroutputs for each function 
-                spill(p, cur_f);  // do this with another concrete visitor, output of it creates new instruction list, set f -> inst to new list
-            }
+                if (color_graph()) break; // so now we have spilloutputs and coloroutputs for each function 
+                tempCounters[i] = spill(p, spillOutputs[i], cur_f, tempCounters[i]);  // do this with another concrete visitor, output of it creates new instruction list, set f -> inst to new list
+            } 
+                */
             cur_f=i; 
         }
 
@@ -44,8 +51,13 @@ namespace L2{
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* dst = i.dst(); 
         const Item* src = i.src(); 
+
+        collectVar(src);
+        collectVar(dst);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(src)) {
             ls.gen.insert(src->emit(options));
         }
@@ -61,9 +73,12 @@ namespace L2{
     void LivenessAnalysisBehavior::act(Instruction_stack_arg_assignment& i) {
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* dst = i.dst(); 
+   
+        collectVar(dst);
 
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(dst)) {
             ls.kill.insert(dst->emit(options));
         }
@@ -73,6 +88,10 @@ namespace L2{
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* dst = i.dst(); 
         const Item* src = i.rhs(); 
+
+        collectVar(src);
+        collectVar(dst);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
 
@@ -89,6 +108,10 @@ namespace L2{
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* dst = i.dst(); 
         const Item* src = i.src(); 
+
+        collectVar(src);
+        collectVar(dst);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
 
@@ -105,8 +128,13 @@ namespace L2{
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* lhs = i.lhs(); 
         const Item* rhs = i.rhs(); 
+
+        collectVar(lhs);
+        collectVar(rhs);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(lhs)) {
             ls.gen.insert(lhs->emit(options));
             if (lhs->kind() != ItemType::MemoryItem) {
@@ -123,8 +151,14 @@ namespace L2{
         const Item* dst = i.dst(); 
         const Item* lhs = i.lhs(); 
         const Item* rhs = i.rhs(); 
+
+        collectVar(lhs);
+        collectVar(rhs);
+        collectVar(dst);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(dst)) {
             ls.kill.insert(dst->emit(options));
         } 
@@ -140,8 +174,13 @@ namespace L2{
         auto &ls = livenessData[cur_f][cur_i]; 
         const Item* lhs = i.lhs(); 
         const Item* rhs = i.rhs(); 
+
+        collectVar(lhs);
+        collectVar(rhs);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(lhs)) {
             ls.gen.insert(lhs->emit(options)); 
         }
@@ -175,11 +214,16 @@ namespace L2{
         ls.kill.insert(caller_save_registers.begin(), caller_save_registers.end());
 
         std::vector<std::string> argument_registers = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
         if (i.callType() == CallType::l1) {
             const Item* callee = i.callee();
+
+            collectVar(callee); 
+
             if (isLivenessContributor(callee)) {
                 EmitOptions options; 
                 options.livenessAnalysis = true; 
+
                 ls.gen.insert(callee->emit(options));
             }
         }
@@ -193,8 +237,12 @@ namespace L2{
     void LivenessAnalysisBehavior::act(Instruction_reg_inc_dec& i) {
         auto &ls = livenessData[cur_f][cur_i];
         const Item* dst = i.dst(); 
+
+        collectVar(dst); 
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(dst)) {
             ls.gen.insert(dst->emit(options)); 
             ls.kill.insert(dst->emit(options));
@@ -206,8 +254,14 @@ namespace L2{
         const Item* dst = i.dst();
         const Item* lhs = i.lhs();
         const Item* rhs = i.rhs();
+
+        collectVar(lhs);
+        collectVar(rhs); 
+        collectVar(dst);
+
         EmitOptions options; 
         options.livenessAnalysis = true; 
+
         if (isLivenessContributor(lhs)) {
             ls.gen.insert(lhs->emit(options));
         }
@@ -220,6 +274,9 @@ namespace L2{
     }
 
     void LivenessAnalysisBehavior::initialize_containers(size_t n) {
+        tempCounters.resize(n, 0); 
+
+        variables.resize(n); 
         livenessData.resize(n); 
         labelMap.resize(n); 
         interferenceGraph.resize(n);
@@ -231,6 +288,7 @@ namespace L2{
     }
 
     void LivenessAnalysisBehavior::clear_function_containers() {
+        variables[cur_f].clear(); 
         livenessData[cur_f].clear();
         labelMap[cur_f].clear(); 
         interferenceGraph[cur_f].clear(); 
@@ -241,6 +299,9 @@ namespace L2{
         colorOutputs[cur_f].clear(); 
     }
 
+    bool LivenessAnalysisBehavior::isVariable(const Item* var) {
+        return var->kind() == ItemType::VariableItem; 
+    }
 
     bool LivenessAnalysisBehavior::isLivenessContributor(const Item* var) {
         EmitOptions options; 
@@ -276,6 +337,19 @@ namespace L2{
             first = false;
         }
         std::cout << "\n\n";  
+    }
+
+    void LivenessAnalysisBehavior::collectVar(const Item* i) {
+        if (!i) return; 
+        if (!isLivenessContributor(i)) return; 
+
+        EmitOptions options; 
+        options.livenessAnalysis = true; 
+
+        std::string s = i->emit(options);
+        if (!s.empty() && s[0] == '%') {
+            variables[cur_f].insert(s);
+        }
     }
 
     void LivenessAnalysisBehavior::generate_in_out_sets(const Program &p) {
@@ -543,7 +617,7 @@ namespace L2{
         }
     }
 
-    void analyze_liveness(Program p) {
+    void analyze_liveness(Program& p) {
 
         LivenessAnalysisBehavior b(std::cout);
         p.accept(b); 
