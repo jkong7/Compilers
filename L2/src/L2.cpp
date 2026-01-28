@@ -74,11 +74,11 @@ ItemType Memory::kind() const {
   return ItemType::MemoryItem; 
 }
 
-Item* Memory::getVar() {
+const Item* Memory::getVar() const {
   return var;
 }
 
-Number* Memory::getOffset() {
+Number* Memory::getOffset() const {
   return offset; 
 }
 

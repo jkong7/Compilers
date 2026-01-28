@@ -114,8 +114,8 @@ namespace L2 {
       std::string emit(const EmitOptions& options = EmitOptions{}) const override;
       ItemType kind() const override; 
 
-      Item* getVar(); 
-      Number* getOffset(); 
+      const Item* getVar() const; 
+      Number* getOffset() const; 
 
     private: 
       Item *var; 
