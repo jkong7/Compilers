@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <cstdint>
 #include <iostream>
@@ -32,11 +33,14 @@ namespace L2 {
   enum ItemType { RegisterItem, NumberItem, LabelItem, FuncItem, VariableItem, StackArgItem, MemoryItem }; 
 
   struct EmitOptions {
+    bool l2tol1 = false; 
     bool eightBitRegister = false; 
     bool memoryStoredLabel = false; 
     bool functionCall = false; 
     bool indirectRegCall = false; 
     bool livenessAnalysis = false; 
+
+    const std::unordered_map<std::string, std::string>* coloring = nullptr; 
   }; 
 
   class Item {

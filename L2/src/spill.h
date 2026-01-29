@@ -19,7 +19,7 @@ namespace L2{
             explicit SpillBehavior(const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t tempCounter, size_t spillCounter); 
             void act(Program& p) override; 
             void act(Function &f) override; 
-            void act(Instruction_assignment &i) override; 
+            virtual void act(Instruction_assignment &i) override; 
             virtual void act(Instruction_stack_arg_assignment &i) override; 
             virtual void act(Instruction_aop &i) override; 
             virtual void act(Instruction_sop &i) override; 

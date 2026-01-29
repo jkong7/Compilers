@@ -97,6 +97,15 @@ namespace L2 {
     }
   }
 
+  std::string string_from_inc_dec(IncDec op) {
+    switch (op) {
+      case IncDec::decrement:     return "--";
+      case IncDec::increment:     return "++";
+      default: 
+        throw std::runtime_error("bad IndDec");
+    }
+  }
+
   std::string jump_assembly_from_cmp(CMP cmp, bool flip) {
     switch (cmp) {
       case CMP::less_than:        return flip ? "jg" : "jl";

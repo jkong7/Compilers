@@ -34,6 +34,7 @@ namespace L2 {
     std::string string_from_aop(AOP op);
     std::string string_from_sop(SOP op);
     std::string string_from_cmp(CMP op);
+    std::string string_from_inc_dec(IncDec op); 
 
     std::string assembly_from_aop(AOP op); 
     std::string assembly_from_inc_dec(IncDec op); 

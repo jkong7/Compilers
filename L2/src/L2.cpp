@@ -84,19 +84,25 @@ Number* Memory::getOffset() const {
 
 std::string Register::emit (const EmitOptions& options) const {
   std::ostringstream s; 
-  std::string reg = options.eightBitRegister ? eightBitReg_assembly_from_register(ID) : options.indirectRegCall ? indirect_call_reg_assembly_from_register(ID) : options.livenessAnalysis ? string_from_register(ID) : assembly_from_register(ID); 
+  std::string reg = options.eightBitRegister ? eightBitReg_assembly_from_register(ID) : options.indirectRegCall ? indirect_call_reg_assembly_from_register(ID) : options.livenessAnalysis || options.l2tol1 ? string_from_register(ID) : assembly_from_register(ID); 
   s << reg; 
   return s.str(); 
 }
 
 std::string Number::emit(const EmitOptions& options) const {
   std::string nString = std::to_string(number); 
+  if (options.l2tol1) {
+    return nString; 
+  }
   std::ostringstream s; 
   s << "$" << nString;
   return s.str(); 
 }
 
 std::string Label::emit(const EmitOptions& options) const {
+  if (options.l2tol1) {
+    return label; 
+  }
   std::string lname = label.substr(1); 
   std::ostringstream s; 
   std::string prefix = options.memoryStoredLabel ? "$_" : "_"; 
@@ -105,6 +111,9 @@ std::string Label::emit(const EmitOptions& options) const {
 }
 
 std::string Func::emit(const EmitOptions& options) const {
+  if (options.l2tol1) {
+    return function_label; 
+  }
   std::string fname = function_label.substr(1); 
   std::ostringstream s; 
   if (options.functionCall) {
@@ -116,6 +125,12 @@ std::string Func::emit(const EmitOptions& options) const {
 }
 
 std::string Variable::emit(const EmitOptions& options) const {
+  if (options.l2tol1) {
+    auto it = options.coloring->find(var); 
+    if (it != options.coloring->end()) {
+      return it->second; 
+    }
+  }
   return var; 
 }
 
@@ -124,6 +139,12 @@ std::string StackArg::emit(const EmitOptions& options) const {
 }
 
 std::string Memory::emit(const EmitOptions& options) const {
+  if (options.l2tol1) {
+    std::ostringstream s; 
+    s << "mem " << var->emit(options) << " " << offset->emit().substr(1); 
+    return s.str(); 
+  }
+
   if (options.livenessAnalysis) {
     return var->emit(options); 
   }
