@@ -16,7 +16,7 @@ namespace L2{
 
     class SpillBehavior: public Behavior {
         public: 
-            explicit SpillBehavior(const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t tempCounter, size_t spillCounter); 
+            explicit SpillBehavior(const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t temps, size_t spills); 
             void act(Program& p) override; 
             void act(Function &f) override; 
             virtual void act(Instruction_assignment &i) override; 
@@ -37,8 +37,8 @@ namespace L2{
             Item* read(Item* src);
             void write(Item* dst, Item* toWrite); 
 
-            size_t spillCounter; 
-            size_t tempCounter; 
+            size_t spillCounter = 0; 
+            size_t tempCounter = 0; 
         private:  
             std::unordered_set<std::string> spillInputs; 
             std::unordered_map<std::string, size_t> varOffsets; 
@@ -47,5 +47,5 @@ namespace L2{
             std::vector<Instruction*> newInstructions;
     };
 
-    std::tuple<size_t, size_t> spill(Program &p, const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t tempCounter, size_t spillCounter); 
+    std::tuple<size_t, size_t> spill(Program &p, const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t temps, size_t spills); 
 }

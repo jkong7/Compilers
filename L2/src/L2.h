@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include <unordered_map>
 #include <string>
@@ -107,6 +108,7 @@ namespace L2 {
       StackArg (Number* n); 
       std::string emit(const EmitOptions& options = EmitOptions{}) const override; 
       ItemType kind() const override; 
+      Number* value(); 
 
     private: 
       Number* offset; 

@@ -83,6 +83,7 @@ int main(
    * Parse the input file.
    */
   
+  /*
   std::string src = read_file(argv[optind]);
   src = "(@go\n" + src + ")";
 
@@ -90,7 +91,8 @@ int main(
   std::ofstream out(tmp);
   out << src;
   out.close();
-  auto p = L2::parse_file((char*)tmp);
+  */
+  auto p = L2::parse_file(argv[optind]);
 
   /*
    * Perform liveness analysis 

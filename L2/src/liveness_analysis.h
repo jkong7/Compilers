@@ -7,6 +7,7 @@
 #include <vector> 
 #include <behavior.h>
 #include <spill.h> 
+#include <code_generator.h>
 #include <helper.h> 
 #include <L2.h>
 

@@ -82,6 +82,10 @@ Number* Memory::getOffset() const {
   return offset; 
 }
 
+Number* StackArg::value() {
+  return offset;
+}
+
 std::string Register::emit (const EmitOptions& options) const {
   std::ostringstream s; 
   std::string reg = options.eightBitRegister ? eightBitReg_assembly_from_register(ID) : options.indirectRegCall ? indirect_call_reg_assembly_from_register(ID) : options.livenessAnalysis || options.l2tol1 ? string_from_register(ID) : assembly_from_register(ID); 

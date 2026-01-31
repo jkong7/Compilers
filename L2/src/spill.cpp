@@ -1,8 +1,8 @@
 #include <spill.h> 
 
 namespace L2 {
-    SpillBehavior::SpillBehavior(const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t tempCounter, size_t spillCounter) 
-        : spillInputs(spillInputs), functionIndex(functionIndex), tempCounter(tempCounter), spillCounter(spillCounter) {
+    SpillBehavior::SpillBehavior(const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t temps, size_t spills) 
+        : spillInputs(spillInputs), functionIndex(functionIndex), tempCounter(temps), spillCounter(spills) {
             for (const auto& v : spillInputs) {
                 varOffsets[v] = spillCounter * 8; 
                 spillCounter++; 
@@ -56,14 +56,14 @@ namespace L2 {
 
     void SpillBehavior::act(Instruction_stack_arg_assignment &i) {
         Item* dst = i.dst(); 
-        Item* src = i.src(); 
+        StackArg* src = i.src(); 
         if (dst->kind() == ItemType::VariableItem && spillInputs.count(dst->emit())) {
             auto temp = newTemp(); 
-            auto ni = new Instruction_assignment(temp, src); 
+            auto ni = new Instruction_stack_arg_assignment(temp, src); 
             newInstructions.push_back(ni);
             write(dst, temp);  
         } else {
-            auto ni = new Instruction_assignment(dst, src); 
+            auto ni = new Instruction_stack_arg_assignment(dst, src); 
             newInstructions.push_back(ni); 
         }
     }
@@ -244,8 +244,8 @@ namespace L2 {
         newInstructions.push_back(i); 
     }
 
-    std::tuple<size_t, size_t> spill(Program& p, const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t tempCounter, size_t spillCounter) {
-        SpillBehavior sb(spillInputs, functionIndex, tempCounter, spillCounter); 
+    std::tuple<size_t, size_t> spill(Program& p, const std::unordered_set<std::string> &spillInputs, size_t functionIndex, size_t temps, size_t spills) {
+        SpillBehavior sb(spillInputs, functionIndex, temps, spills); 
         p.accept(sb); 
         return {sb.tempCounter, sb.spillCounter}; 
     }
