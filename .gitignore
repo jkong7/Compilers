@@ -4,5 +4,6 @@
 !L*/src/
 !L1*/src/**
 !L2*/src/** 
+!L3*/src/** 
 
 !.gitignore
