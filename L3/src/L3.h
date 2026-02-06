@@ -24,6 +24,10 @@ namespace L3 {
 
   enum CallType {l3, print, input, allocate, tuple_error, tensor_error}; 
 
+  struct Context {
+    std::vector<Instruction*> instructions; 
+  };
+
 
   // Items 
 
@@ -226,6 +230,7 @@ namespace L3 {
       std::string name;
       std::vector<Variable*> var_arguments;
       std::vector<Instruction *> instructions;
+      std::vector<Context> contexts; 
 
       void accept(Behavior& b);
 

@@ -499,14 +499,6 @@ struct Instruction_rule:
       p.functions.push_back(current_function);
     }
   };
-
-  template<> struct action< Function_rule > {
-    template<typename Input>
-    static void apply(const Input&, Program& p) {
-      PARSER_PRINT(current_function->var_arguments.size());
-      current_function = nullptr;
-    }
-  };
     
   template<> struct action< function_name_rule > {
     template<typename Input>

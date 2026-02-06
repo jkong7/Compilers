@@ -21,7 +21,7 @@ namespace L2{
                 generate_in_out_sets(p);
                 generate_interference_graph(p);
                 if (color_graph()) break;        
-                std::tie(tempCounters[i], spillCounters[i]) = spill(p, spillOutputs[i], cur_f, tempCounters[i], spillCounters[i]);auto after = p.functions[cur_f]->instructions.size();
+                std::tie(tempCounters[i], spillCounters[i]) = spill(p, spillOutputs[i], cur_f, tempCounters[i], spillCounters[i]);
             } 
         }
         generate_code(p, colorOutputs, spillCounters); 
