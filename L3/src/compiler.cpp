@@ -18,6 +18,7 @@
 
 #include <parser.h>
 #include <behavior.h>
+#include <tree_generation.h>
 
 std::string read_file(const char *path) {
   std::ifstream in(path);
@@ -83,6 +84,9 @@ int main(
    */
   
   auto p = L3::parse_file(argv[optind]);
+
+  // Make context trees 
+  make_trees(p);
 
   /*
    * Perform liveness analysis 

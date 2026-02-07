@@ -30,6 +30,7 @@
 #include <L3.h>
 #include <parser.h>
 #include <helper.h> 
+#include <tree.h>
 
 static constexpr bool PARSER_DEBUG = true;
 

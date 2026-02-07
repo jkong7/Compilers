@@ -8,6 +8,7 @@
 #include <sstream> 
 #include <tuple> 
 #include <L3.h>
+#include <tree.h> 
 
 
 namespace L3{
@@ -28,18 +29,26 @@ namespace L3{
     void act(Instruction_return_t& i) override;
 
     void act(Instruction_label& i) override;
+
+    void act(Instruction_break_label &i) override; 
+    void act(Instruction_break_t_label &i) override; 
     
  
-
     void act(Instruction_call& i) override;
     void act(Instruction_call_assignment& i) override;
+    
+
+    void print_trees(); 
 
   private:
     void end_context(); 
 
     std::vector<Context> contexts; 
-    Instruction* cur_instruction; 
     size_t cur_context = 0; 
 
+    Function* cur_function_ = nullptr;
+
   };
+
+  void make_trees(Program &p);
 }

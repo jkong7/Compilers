@@ -6,12 +6,14 @@
 #include <string>
 #include <cstdint>
 #include <iostream>
+#include <memory> 
 
 #include <behavior.h> 
 
 
 
 namespace L3 {
+  struct Tree; 
   struct Behavior; 
 
   // Enums 
@@ -24,9 +26,6 @@ namespace L3 {
 
   enum CallType {l3, print, input, allocate, tuple_error, tensor_error}; 
 
-  struct Context {
-    std::vector<Instruction*> instructions; 
-  };
 
 
   // Items 
@@ -99,6 +98,10 @@ namespace L3 {
     public: 
       virtual ~Instruction() = default; 
       void virtual accept(Behavior& b) = 0; 
+  };
+
+  struct Context {
+    std::vector<std::unique_ptr<Tree>> trees; 
   };
 
   /*
