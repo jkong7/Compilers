@@ -19,6 +19,7 @@
 #include <parser.h>
 #include <behavior.h>
 #include <tree_generation.h>
+#include <tiler.h> 
 
 std::string read_file(const char *path) {
   std::ifstream in(path);
@@ -87,12 +88,8 @@ int main(
 
   // Make context trees 
   make_trees(p);
-
-  /*
-   * Perform liveness analysis 
-   */
-
-  //L3::analyze_liveness(p); 
+  
+  tile_program(p, std::cout); 
 
   return 0;
 }
