@@ -20,8 +20,8 @@ namespace L3 {
       using T = std::decay_t<decltype(x)>;
       if constexpr (std::is_same_v<T, NumberLeaf>) return std::to_string(x.n);
       if constexpr (std::is_same_v<T, VarLeaf>)    return x.var;
-      if constexpr (std::is_same_v<T, LabelLeaf>)  return ":" + x.label;
-      if constexpr (std::is_same_v<T, FuncLeaf>)   return "@" + x.name;
+      if constexpr (std::is_same_v<T, LabelLeaf>)  return x.label;
+      if constexpr (std::is_same_v<T, FuncLeaf>)   return x.name;
       return "?leaf";
     }, leaf);
   }
@@ -36,7 +36,7 @@ namespace L3 {
       case plus:        return "+=";
       case minus:       return "-=";
       case times:       return "*=";
-      case at:          return "@=";
+      case at:          return "&=";
       case left_shift:  return "<<=";
       case right_shift: return ">>=";
     }
@@ -54,6 +54,21 @@ namespace L3 {
     return "?cmp";
   }
 
+  static std::string compute_prefix_from_program(const Program& p) {
+    std::string longest = "L";
+    for (auto* f : p.functions) {
+      if (!f) continue;
+      for (auto* inst : f->instructions) {
+        if (auto* lab = dynamic_cast<Instruction_label*>(inst)) {
+          std::string s = lab->label_->emit();
+          if (!s.empty() && s[0] == ':') s = s.substr(1);
+          if (s.size() > longest.size()) longest = s;
+        }
+      }
+    }
+    return ":" + longest + "_global_";
+  }
+
 
 
 
@@ -68,6 +83,28 @@ namespace L3 {
     return num_instructions_;
   }
 
+  std::string Emitter::fresh_tmp() {
+    return "%__tmp" + std::to_string(tmp_next_++);
+  }
+
+  void GlobalLabel::enter_function(const std::string& fn) { cur_fn = fn; }
+
+  std::string GlobalLabel::make_label(const std::string& l3_label) {
+    const std::string key = cur_fn + "|" + l3_label;
+
+    auto it = labelMap.find(key);
+    if (it != labelMap.end()) {
+      return prefix + std::to_string(it->second);
+    }
+
+    int64_t id = next++;
+    labelMap.emplace(key, id);
+    return prefix + std::to_string(id);
+  }
+
+  std::string GlobalLabel::make_fresh_label() {
+    return prefix + std::to_string(next++);
+  }
 
 
 
@@ -91,7 +128,7 @@ namespace L3 {
     return 1; 
   } 
 
-  void AssignTile::emit(const Match& m, Emitter& e) {
+  void AssignTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
     e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs));
   } 
 
@@ -122,9 +159,30 @@ namespace L3 {
     return 1; 
   }
 
-  void AssignBinOpTile::emit(const Match& m, Emitter& e) { // a <- b + c
-    e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.lhs)); 
-    e.line(leaf_node_to_str(m.dst) + " " + op_to_str(m.op.value()) + " " + leaf_node_to_str(m.rhs));
+  void AssignBinOpTile::emit(const Match& m, Emitter& e, GlobalLabel&) {
+    auto dst = leaf_node_to_str(m.dst);
+    auto lhs = leaf_node_to_str(m.lhs);
+    auto rhs = leaf_node_to_str(m.rhs);
+    auto op  = std::string(op_to_str(m.op.value()));
+
+    if (dst == lhs) {
+      // x <- x op y  => x op= y
+      e.line(dst + " " + op + " " + rhs);
+      return;
+    }
+
+    if (dst == rhs) {
+      // x <- y op x  => need temp
+      std::string tmp = e.fresh_tmp();  // pick a guaranteed-fresh temp name (better: have a temp generator)
+      e.line(tmp + " <- " + rhs);
+      e.line(dst + " <- " + lhs);
+      e.line(dst + " " + op + " " + tmp);
+      return;
+    }
+
+    // general safe case
+    e.line(dst + " <- " + lhs);
+    e.line(dst + " " + op + " " + rhs);
   }
 
 
@@ -147,7 +205,7 @@ namespace L3 {
     m.dst = dst; 
     m.lhs = lhs; 
     m.rhs = rhs; 
-    m.cmp = rhs -> cmp; 
+    m.cmp = cmp -> cmp; 
     return true; 
   }
 
@@ -155,13 +213,13 @@ namespace L3 {
     return 1; 
   }
 
-  void AssignCmpTile::emit(const Match& m, Emitter& e) { 
+  void AssignCmpTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) { 
     if (cmp_to_str(m.cmp.value()) == ">") {
       e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs) + " " + "<" + " " + leaf_node_to_str(m.lhs));
     } else if (cmp_to_str(m.cmp.value()) == ">=") {
       e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs) + " " + "<=" + " " + leaf_node_to_str(m.lhs));
     } else {
-      e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs) + " " + cmp_to_str(m.cmp.value()) + " " + leaf_node_to_str(m.lhs));
+      e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.lhs) + " " + cmp_to_str(m.cmp.value()) + " " + leaf_node_to_str(m.rhs));
     }
   }
 
@@ -181,7 +239,7 @@ namespace L3 {
     return 1; 
   } 
 
-  void LoadTile::emit(const Match& m, Emitter& e) {
+  void LoadTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
     e.line(leaf_node_to_str(m.dst) + " <- " + "mem " + leaf_node_to_str(m.rhs) + " 0");
   }
 
@@ -202,7 +260,7 @@ namespace L3 {
     return 1; 
   } 
 
-  void StoreTile::emit(const Match& m, Emitter& e) {
+  void StoreTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
     e.line("mem " + leaf_node_to_str(m.dst) + " 0" + " <- " + leaf_node_to_str(m.rhs)); 
   }
 
@@ -220,7 +278,10 @@ namespace L3 {
     return 1;
   }
 
-  void ReturnTile::emit(const Match& m, Emitter &e) {
+  void ReturnTile::emit(const Match& m, Emitter &e, GlobalLabel& labeler) {
+    if (m.lhs) {
+      e.line("rax <- " + leaf_node_to_str(m.lhs));
+    }
     e.line("return"); 
   }
 
@@ -240,15 +301,19 @@ namespace L3 {
     return 1; 
   }
 
-  void BreakTile::emit(const Match& m, Emitter &e) {
-    e.line("goto " + leaf_node_to_str(m.lhs)); 
+  void BreakTile::emit(const Match& m, Emitter &e, GlobalLabel& labeler) {
+    if (m.rhs) {
+      e.line("cjump " + leaf_node_to_str(m.rhs) + " = 1 " + labeler.make_label(leaf_node_to_str(m.lhs)));
+    } else {
+      e.line("goto " + labeler.make_label(leaf_node_to_str(m.lhs))); 
+    }
   }
 
 
 
 
-  TilingEngine::TilingEngine(std::ostream& out)
-    : emitter_(out) {
+  TilingEngine::TilingEngine(std::ostream& out, GlobalLabel& labeler)
+    : emitter_(out), labeler_(labeler) {
     add_tile(std::make_unique<AssignBinOpTile>());
     add_tile(std::make_unique<AssignCmpTile>());
     add_tile(std::make_unique<AssignTile>());
@@ -286,26 +351,102 @@ namespace L3 {
       std::cerr << "No tile matched tree kind=" << static_cast<int>(t.kind) << "\n";
       assert(false);
     }
-    tile->emit(m, emitter_);
+    tile->emit(m, emitter_, labeler_);
   }
 
   void TilingEngine::tile_function(Function& f) {
+    labeler_.enter_function(f.name);
+    emitter_.line("(" + f.name);
+    std::vector<Variable*> vars = f.var_arguments;
+    emitter_.line(std::to_string(vars.size())); 
+    for (size_t idx = 0; idx < vars.size(); idx++) {
+      if (idx == 0) emitter_.line(vars[idx]->emit() + " <- rdi");
+      if (idx == 1) emitter_.line(vars[idx]->emit() + " <- rsi");
+      if (idx == 2) emitter_.line(vars[idx]->emit() + " <- rdx");
+      if (idx == 3) emitter_.line(vars[idx]->emit() + " <- rcx");
+      if (idx == 4) emitter_.line(vars[idx]->emit() + " <- r8");
+      if (idx == 5) emitter_.line(vars[idx]->emit() + " <- r9");
+    }
     for (const auto& ctx : f.contexts) {
-      for (const auto& treePtr : ctx.trees) {
-        if (treePtr) tile_tree(*treePtr);
+      for (auto& treePtr : ctx.trees) {
+        if (auto *t = std::get_if<std::unique_ptr<Tree>>(&treePtr)) {
+          tile_tree(*t->get());
+        } else if (auto *i = std::get_if<Instruction_label*>(&treePtr)) {
+          emitter_.line(labeler_.make_label(":"+(*i)->label_->emit().substr(1))); 
+        } else if (auto *i = std::get_if<Instruction_call*>(&treePtr)) {
+          for (size_t idx = 0; idx < (*i)->args_.size(); idx++) {
+            std::string arg = (*i)->args_[idx]->emit(); 
+            if (idx == 0) emitter_.line("rdi <- " + arg);
+            if (idx == 1) emitter_.line("rsi <- " + arg); 
+            if (idx == 2) emitter_.line("rdx <- " + arg); 
+            if (idx == 3) emitter_.line("rcx <- " + arg); 
+            if (idx == 4) emitter_.line("r8 <- " + arg); 
+            if (idx == 5) emitter_.line("r9 <- " + arg); 
+          }
+          CallType c = (*i)->c_;
+          if (c == CallType::l3) {
+            EmitOptions options; 
+            options.l3tol2 = true;
+            std::string ret = labeler_.make_fresh_label(); 
+            emitter_.line("mem rsp -8 <- " + ret);
+            emitter_.line("call " + (*i)->callee_->emit(options) + " " + std::to_string((*i)->args_.size()));
+            emitter_.line(ret);
+          } else if (c == CallType::print) {
+            emitter_.line("call print " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::input) {
+            emitter_.line("call input " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::allocate) {
+            emitter_.line("call allocate " + std::to_string((*i)->args_.size()));
+          }
+        } else if (auto *i = std::get_if<Instruction_call_assignment*>(&treePtr)) {
+          for (size_t idx = 0; idx < (*i)->args_.size(); idx++) {
+            std::string arg = (*i)->args_[idx]->emit(); 
+            if (idx == 0) emitter_.line("rdi <- " + arg);
+            if (idx == 1) emitter_.line("rsi <- " + arg); 
+            if (idx == 2) emitter_.line("rdx <- " + arg); 
+            if (idx == 3) emitter_.line("rcx <- " + arg); 
+            if (idx == 4) emitter_.line("r8 <- " + arg); 
+            if (idx == 5) emitter_.line("r9 <- " + arg); 
+          }
+          CallType c = (*i)->c_;
+          if (c == CallType::l3) {
+            EmitOptions options; 
+            options.l3tol2 = true;
+            std::string ret = labeler_.make_fresh_label();
+            emitter_.line("mem rsp -8 <- " + ret);
+            emitter_.line("call " + (*i)->callee_->emit(options) + " " + std::to_string((*i)->args_.size()));
+            emitter_.line(ret);
+          } else if (c == CallType::print) {
+            emitter_.line("call print " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::input) {
+            emitter_.line("call input " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::allocate) {
+            emitter_.line("call allocate " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::tuple_error) {
+            emitter_.line("call tuple-error " + std::to_string((*i)->args_.size()));
+          } else if (c == CallType::tensor_error) {
+            emitter_.line("call tensor-error " + std::to_string((*i)->args_.size()));  
+          }
+          emitter_.line((*i)->dst_->emit() + " <- rax");
+        }
       }
     }
+    emitter_.line(")");
   }
 
   void TilingEngine::tile(Program& p) {
+    emitter_.line("(@main");
     for (auto* f : p.functions) {
       if (!f) continue;
       tile_function(*f);
     }
+    emitter_.line(")");
   }
 
   void tile_program(Program& p, std::ostream& out) {
-    TilingEngine eng(out);
+    GlobalLabel labeler{}; 
+    labeler.prefix = compute_prefix_from_program(p);
+    TilingEngine eng(out, labeler);
     eng.tile(p);
   }
 } 

@@ -89,7 +89,10 @@ int main(
   // Make context trees 
   make_trees(p);
   
-  tile_program(p, std::cout); 
+  std::ofstream outputFile;
+  outputFile.open("prog.L2");
+
+  tile_program(p, outputFile); 
 
   return 0;
 }

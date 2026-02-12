@@ -652,7 +652,6 @@ struct Instruction_rule:
   template<> struct action < function_name_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-      std::cout << "FUNCTION PARSING" << std::endl; 
       if (p.entryPointLabel.empty()){
         p.entryPointLabel = in.string();
       } else {
@@ -666,7 +665,6 @@ struct Instruction_rule:
   template<> struct action < argument_number > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "ARG NUMBER PARSING" << std::endl; 
 
       auto currentF = p.functions.back();
       currentF->arguments = std::stoll(in.string());
@@ -676,7 +674,6 @@ struct Instruction_rule:
   template<> struct action < local_number > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "LOCAL NUMBER PARSING" << std::endl; 
 
       auto currentF = p.functions.back();
       currentF->locals = std::stoll(in.string());
@@ -692,14 +689,12 @@ struct Instruction_rule:
   template<> struct action<register_rax_rule> {
     template<typename Input>
     static void apply(const Input&, Program&) { 
-      std::cout << "rax" << std::endl; 
       parsed_items.push_back(new Register(RegisterID::rax)); }
   };
 
   template<> struct action<register_rbx_rule> {
     template<typename Input>
     static void apply(const Input&, Program&) { 
-            std::cout << "rbx" << std::endl; 
       parsed_items.push_back(new Register(RegisterID::rbx)); }
   };
 
@@ -731,7 +726,6 @@ struct Instruction_rule:
   template<> struct action<register_r14_rule> {
     template<typename Input>
     static void apply(const Input&, Program&) { 
-            std::cout << "r14" << std::endl; 
       parsed_items.push_back(new Register(RegisterID::r14)); }
   };
 
@@ -743,7 +737,6 @@ struct Instruction_rule:
   template<> struct action<register_rdi_rule> {
     template<typename Input>
     static void apply(const Input&, Program&) { 
-      std::cout << "rdi" << std::endl; 
       parsed_items.push_back(new Register(RegisterID::rdi)); }
   };
 
@@ -755,7 +748,6 @@ struct Instruction_rule:
   template<> struct action<register_rdx_rule> {
     template<typename Input>
     static void apply(const Input&, Program&) { 
-      std::cout << "rdx" << std::endl; 
       parsed_items.push_back(new Register(RegisterID::rdx)); }
   };
 
@@ -785,7 +777,6 @@ struct Instruction_rule:
     template< typename Input >
     static void apply (const Input &in, Program &p) {
       auto n = new Number(static_cast<uint64_t>(std::stoull(in.string())));
-      std::cout << in.string() << std::endl; 
       parsed_items.push_back(n);
     }
   };
@@ -795,7 +786,6 @@ struct Instruction_rule:
     template< typename Input >
     static void apply (const Input &in, Program &p) {
       auto l = new Label(in.string());
-      std::cout << in.string() << std::endl; 
       parsed_items.push_back(l);
     }
   };
@@ -805,7 +795,6 @@ struct Instruction_rule:
     template< typename Input >
     static void apply (const Input &in, Program &p) {
       auto f = new Func(in.string());
-      std::cout << in.string() << std::endl; 
       parsed_items.push_back(f);
     }
   };
@@ -823,7 +812,6 @@ struct Instruction_rule:
     template< typename Input >
     static void apply (const Input &in, Program &p) {
       last_sop = sop_from_string(in.string()); 
-      std::cout << in.string() << std::endl; 
     }
   };
 
@@ -833,7 +821,6 @@ struct Instruction_rule:
     template< typename Input >
     static void apply (const Input &in, Program &p) {
       last_cmp = cmp_from_string(in.string()); 
-      std::cout << in.string() << std::endl; 
     }
   };
 
@@ -842,7 +829,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_assignment_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "ASSIGNMENT PARSING" << std::endl; 
 
 
       /* 
@@ -874,7 +860,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_memory_load_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "MEMORY LOAD PARSING" << std::endl; 
 
 
       /* 
@@ -910,7 +895,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_memory_store_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "MEMORY STORE PARSING" << std::endl; 
 
 
       /* 
@@ -947,7 +931,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_aop_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "AOP RULE PARSING" << std::endl; 
 
 
       /* 
@@ -979,7 +962,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_sop_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "SOP RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1012,7 +994,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_mem_arith_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "MEM ARITH PARSING" << std::endl; 
 
 
       /* 
@@ -1052,7 +1033,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_reg_arith_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "REG ARITH PARSING" << std::endl; 
 
 
       /* 
@@ -1092,7 +1072,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_assignment_cmp_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "CMP ASSIGNMENT RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1129,7 +1108,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_cjump_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "CJUMP RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1165,7 +1143,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_label_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "label instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1196,7 +1173,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_goto_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "goto instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1227,7 +1203,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_return_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "RETURN PARSING" << std::endl; 
 
       auto currentF = p.functions.back();
       auto i = new Instruction_ret();
@@ -1238,7 +1213,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_l1_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "L1 call instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1272,7 +1246,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_print_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "print instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1296,7 +1269,6 @@ struct Instruction_rule:
     template<> struct action < Instruction_input_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "input instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1319,7 +1291,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_allocate_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "allocate instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1342,7 +1313,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_tuple_error_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "tuple error instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1366,7 +1336,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_tensor_error_call_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "tensor error instruction RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1396,7 +1365,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_register_increment_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "register increment RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1427,7 +1395,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_register_decrement_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "register decrement RULE PARSING" << std::endl; 
 
 
       /* 
@@ -1460,7 +1427,6 @@ struct Instruction_rule:
   template<> struct action < Instruction_lea_rule > {
     template< typename Input >
 	  static void apply( const Input & in, Program & p){
-              std::cout << "lea RULE PARSING" << std::endl; 
 
 
       /* 

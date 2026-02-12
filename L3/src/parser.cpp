@@ -32,7 +32,7 @@
 #include <helper.h> 
 #include <tree.h>
 
-static constexpr bool PARSER_DEBUG = true;
+static constexpr bool PARSER_DEBUG = false;
 
 #define PARSER_PRINT(msg) \
   do { if (PARSER_DEBUG) std::cerr << msg << std::endl; } while (0)
@@ -126,11 +126,11 @@ namespace L3 {
 
   struct cmp_rule:
     pegtl::sor<
-      str_less_than,
-      str_less_than_equal,  
-      str_equal, 
-      str_greater_than, 
-      str_greater_than_equal
+      str_less_than_equal,
+      str_less_than,  
+      str_equal,  
+      str_greater_than_equal,
+      str_greater_than
     > {}; 
 
 
@@ -236,10 +236,9 @@ namespace L3 {
     > { };
 
 
-  struct comment: 
-    pegtl::disable< 
-      TAO_PEGTL_STRING( "//" ), 
-      pegtl::until< pegtl::eolf > 
+  struct comment :
+    pegtl::disable<
+      pegtl::seq< TAO_PEGTL_STRING("//"), pegtl::until< pegtl::eolf > >
     > {};
 
 
@@ -429,9 +428,7 @@ struct Instruction_rule:
     pegtl::seq< pegtl::at< Instruction_break_t_label_rule >           , Instruction_break_t_label_rule            >,
 
     pegtl::seq< pegtl::at< Instruction_call_assignment_rule >                 , Instruction_call_assignment_rule                  >,
-    pegtl::seq< pegtl::at< Instruction_call_rule >           , Instruction_call_rule            >,
-
-    pegtl::seq< pegtl::at< comment >                              , comment                               >
+    pegtl::seq< pegtl::at< Instruction_call_rule >           , Instruction_call_rule            >
   > {};
 
 
@@ -442,6 +439,8 @@ struct Instruction_rule:
         pegtl::bol,
         spaces,
         Instruction_rule,
+        spaces,
+        pegtl::opt< comment >, 
         seps_with_comments
       >
     > { };
@@ -460,6 +459,7 @@ struct Instruction_rule:
       vars_rule,             
       spaces,
       str_var_right_paren,
+      seps_with_comments,
       spaces,
       str_left_brace,
       seps_with_comments,

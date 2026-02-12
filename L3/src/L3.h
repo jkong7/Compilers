@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <cstdint>
+#include <variant>
 #include <iostream>
 #include <memory> 
 
@@ -39,6 +40,7 @@ namespace L3 {
     bool functionCall = false; 
     bool indirectRegCall = false; 
     bool livenessAnalysis = false; 
+    bool l3tol2 = false; 
 
     const std::unordered_map<std::string, std::string>* coloring = nullptr; 
   }; 
@@ -100,8 +102,10 @@ namespace L3 {
       void virtual accept(Behavior& b) = 0; 
   };
 
+  using Node = std::variant<std::unique_ptr<Tree>, Instruction_label*, Instruction_call*, Instruction_call_assignment*>; 
+
   struct Context {
-    std::vector<std::unique_ptr<Tree>> trees; 
+    std::vector<Node> trees; 
   };
 
   /*

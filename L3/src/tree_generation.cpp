@@ -30,7 +30,7 @@ namespace L3 {
         );
 
         f.contexts = std::move(contexts); 
-        print_trees(); 
+        //print_trees(); 
     }
 
     void ContextBehavior::act(Instruction_assignment& i) {
@@ -86,6 +86,7 @@ namespace L3 {
     }
 
     void ContextBehavior::act(Instruction_label& i) {
+        contexts[cur_context].trees.push_back(&i);
         end_context();
     }
 
@@ -105,10 +106,12 @@ namespace L3 {
     }
 
     void ContextBehavior::act(Instruction_call& i) {
+        contexts[cur_context].trees.push_back(&i);
         end_context();
     }
 
     void ContextBehavior::act(Instruction_call_assignment& i) {
+        contexts[cur_context].trees.push_back(&i);
         end_context(); 
     }
 
@@ -121,8 +124,6 @@ namespace L3 {
         ContextBehavior cb; 
         cb.act(p);
     }
-
-
 
 
 
@@ -250,13 +251,19 @@ namespace L3 {
         std::cout << "\n[Context " << ci << "] trees=" << ctxs[ci].trees.size() << "\n";
         for (size_t ti = 0; ti < ctxs[ci].trees.size(); ++ti) {
         std::cout << "  (Tree " << ti << ")\n";
-        print_tree_rec(ctxs[ci].trees[ti].get(), 4, std::cout);
+        if (auto* t = std::get_if<std::unique_ptr<Tree>>(&ctxs[ci].trees[ti])) {
+            if (t->get()) {
+                print_tree_rec(t->get(), 4, std::cout);
+            }
+        } else if (auto *i = std::get_if<Instruction_label*>(&ctxs[ci].trees[ti])) {
+            std::cout << "  " << "LABEL instruction";
+        } else if (auto *i = std::get_if<Instruction_call*>(&ctxs[ci].trees[ti])) {
+            std::cout << "  " << "CALL instruction";
+        } else if (auto *i = std::get_if<Instruction_call_assignment*>(&ctxs[ci].trees[ti])) {
+            std::cout << "  " << "CALL assignment instruction";
+        }
         }
     }
-
     std::cout << "\n=== end ===\n";
     }
-
-
-
 } 

@@ -49,13 +49,7 @@ ItemType Variable::kind() const {
 
 
 std::string Number::emit(const EmitOptions& options) const {
-  std::string nString = std::to_string(number_); 
-  if (options.l2tol1) {
-    return nString; 
-  }
-  std::ostringstream s; 
-  s << "$" << nString;
-  return s.str(); 
+  return std::to_string(number_); 
 }
 
 std::string Label::emit(const EmitOptions& options) const {
@@ -77,6 +71,8 @@ std::string Func::emit(const EmitOptions& options) const {
   std::ostringstream s; 
   if (options.functionCall) {
     s << "_" << fname; 
+  } else if (options.l3tol2) {
+    s << "@" << fname; 
   } else {
     s << "$_" << fname; 
   }
@@ -84,12 +80,6 @@ std::string Func::emit(const EmitOptions& options) const {
 }
 
 std::string Variable::emit(const EmitOptions& options) const {
-  if (options.l2tol1) {
-    auto it = options.coloring->find(var_); 
-    if (it != options.coloring->end()) {
-      return it->second; 
-    }
-  }
   return var_; 
 }
 
