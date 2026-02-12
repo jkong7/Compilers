@@ -17,12 +17,10 @@ namespace L3 {
     explicit Emitter(std::ostream& out);
 
     void line(const std::string& s);
-    int64_t num_instructions() const;
     std::string fresh_tmp(); 
 
   private:
     std::ostream& out_;
-    int64_t num_instructions_ = 0;
     int64_t tmp_next_ = 0; 
   };
 
@@ -111,21 +109,21 @@ namespace L3 {
 
 
 
-
-
-
-
-
-
-
   class TilingEngine {
   public:
     explicit TilingEngine(std::ostream& out, GlobalLabel& labeler);
-    void add_tile(std::unique_ptr<Tile> t);
     void tile(Program& p);
 
   private:
+    void add_tile(std::unique_ptr<Tile> t);
+
     void tile_function(Function& f);
+
+    void codegen(const Node& item);
+    void initialize_function_args(const std::vector<Variable*> var_arguments);
+    template <class CallT>
+    void handle_call(const CallT* call);
+
     void tile_tree(const Tree& t);
     Tile* select_best_tile(const Tree& t, Match& out_match) const;
 

@@ -6,7 +6,6 @@
 
 namespace L3 {
 
-  
   static bool is_leaf(const Tree& t) {
     return t.kind == TreeType::Leaf && t.leaf.has_value(); 
   }
@@ -71,21 +70,17 @@ namespace L3 {
 
 
 
-
   Emitter::Emitter(std::ostream& out) : out_(out) {}
 
   void Emitter::line(const std::string& s) {
     out_ << "  " << s << "\n";
-    ++num_instructions_;
-  }
-
-  int64_t Emitter::num_instructions() const {
-    return num_instructions_;
   }
 
   std::string Emitter::fresh_tmp() {
     return "%__tmp" + std::to_string(tmp_next_++);
   }
+
+
 
   void GlobalLabel::enter_function(const std::string& fn) { cur_fn = fn; }
 
@@ -173,7 +168,7 @@ namespace L3 {
 
     if (dst == rhs) {
       // x <- y op x  => need temp
-      std::string tmp = e.fresh_tmp();  // pick a guaranteed-fresh temp name (better: have a temp generator)
+      std::string tmp = e.fresh_tmp();  
       e.line(tmp + " <- " + rhs);
       e.line(dst + " <- " + lhs);
       e.line(dst + " " + op + " " + tmp);
@@ -354,10 +349,8 @@ namespace L3 {
     tile->emit(m, emitter_, labeler_);
   }
 
-  void TilingEngine::tile_function(Function& f) {
-    labeler_.enter_function(f.name);
-    emitter_.line("(" + f.name);
-    std::vector<Variable*> vars = f.var_arguments;
+  void TilingEngine::initialize_function_args(const std::vector<Variable*> var_arguments) {
+    std::vector<Variable*> vars = var_arguments;
     emitter_.line(std::to_string(vars.size())); 
     for (size_t idx = 0; idx < vars.size(); idx++) {
       if (idx == 0) emitter_.line(vars[idx]->emit() + " <- rdi");
@@ -367,68 +360,61 @@ namespace L3 {
       if (idx == 4) emitter_.line(vars[idx]->emit() + " <- r8");
       if (idx == 5) emitter_.line(vars[idx]->emit() + " <- r9");
     }
+  }
+
+  template <class CallT>
+  void TilingEngine::handle_call(const CallT* call) {
+    for (size_t idx = 0; idx < call->args_.size(); ++idx) {
+      std::string arg = call->args_[idx]->emit();
+      if (idx == 0) emitter_.line("rdi <- " + arg);
+      if (idx == 1) emitter_.line("rsi <- " + arg);
+      if (idx == 2) emitter_.line("rdx <- " + arg);
+      if (idx == 3) emitter_.line("rcx <- " + arg);
+      if (idx == 4) emitter_.line("r8 <- " + arg);
+      if (idx == 5) emitter_.line("r9 <- " + arg);
+    }
+
+    CallType c = call->c_;
+    if (c == CallType::l3) {
+
+      std::string ret = labeler_.make_fresh_label();
+      emitter_.line("mem rsp -8 <- " + ret);
+      emitter_.line("call " + call->callee_->emit() + " " +
+                    std::to_string(call->args_.size()));
+      emitter_.line(ret);
+    } else if (c == CallType::print) {
+      emitter_.line("call print " + std::to_string(call->args_.size()));
+    } else if (c == CallType::input) {
+      emitter_.line("call input " + std::to_string(call->args_.size()));
+    } else if (c == CallType::allocate) {
+      emitter_.line("call allocate " + std::to_string(call->args_.size()));
+    } else if (c == CallType::tuple_error) {
+      emitter_.line("call tuple-error " + std::to_string(call->args_.size()));
+    } else if (c == CallType::tensor_error) {
+      emitter_.line("call tensor-error " + std::to_string(call->args_.size()));
+    }
+  }
+
+  void TilingEngine::codegen (const Node& item) {
+    if (auto *t = std::get_if<std::unique_ptr<Tree>>(&item)) {
+        tile_tree(*t->get());
+      } else if (auto *i = std::get_if<Instruction_label*>(&item)) {
+        emitter_.line(labeler_.make_label((*i)->label_->emit())); 
+      } else if (auto *i = std::get_if<Instruction_call*>(&item)) {
+        handle_call(*i);
+      } else if (auto *i = std::get_if<Instruction_call_assignment*>(&item)) {
+        handle_call(*i);
+        emitter_.line((*i)->dst_->emit() + " <- rax");
+    }
+  }
+
+  void TilingEngine::tile_function(Function& f) {
+    labeler_.enter_function(f.name);
+    emitter_.line("(" + f.name);
+    initialize_function_args(f.var_arguments);
     for (const auto& ctx : f.contexts) {
-      for (auto& treePtr : ctx.trees) {
-        if (auto *t = std::get_if<std::unique_ptr<Tree>>(&treePtr)) {
-          tile_tree(*t->get());
-        } else if (auto *i = std::get_if<Instruction_label*>(&treePtr)) {
-          emitter_.line(labeler_.make_label(":"+(*i)->label_->emit().substr(1))); 
-        } else if (auto *i = std::get_if<Instruction_call*>(&treePtr)) {
-          for (size_t idx = 0; idx < (*i)->args_.size(); idx++) {
-            std::string arg = (*i)->args_[idx]->emit(); 
-            if (idx == 0) emitter_.line("rdi <- " + arg);
-            if (idx == 1) emitter_.line("rsi <- " + arg); 
-            if (idx == 2) emitter_.line("rdx <- " + arg); 
-            if (idx == 3) emitter_.line("rcx <- " + arg); 
-            if (idx == 4) emitter_.line("r8 <- " + arg); 
-            if (idx == 5) emitter_.line("r9 <- " + arg); 
-          }
-          CallType c = (*i)->c_;
-          if (c == CallType::l3) {
-            EmitOptions options; 
-            options.l3tol2 = true;
-            std::string ret = labeler_.make_fresh_label(); 
-            emitter_.line("mem rsp -8 <- " + ret);
-            emitter_.line("call " + (*i)->callee_->emit(options) + " " + std::to_string((*i)->args_.size()));
-            emitter_.line(ret);
-          } else if (c == CallType::print) {
-            emitter_.line("call print " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::input) {
-            emitter_.line("call input " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::allocate) {
-            emitter_.line("call allocate " + std::to_string((*i)->args_.size()));
-          }
-        } else if (auto *i = std::get_if<Instruction_call_assignment*>(&treePtr)) {
-          for (size_t idx = 0; idx < (*i)->args_.size(); idx++) {
-            std::string arg = (*i)->args_[idx]->emit(); 
-            if (idx == 0) emitter_.line("rdi <- " + arg);
-            if (idx == 1) emitter_.line("rsi <- " + arg); 
-            if (idx == 2) emitter_.line("rdx <- " + arg); 
-            if (idx == 3) emitter_.line("rcx <- " + arg); 
-            if (idx == 4) emitter_.line("r8 <- " + arg); 
-            if (idx == 5) emitter_.line("r9 <- " + arg); 
-          }
-          CallType c = (*i)->c_;
-          if (c == CallType::l3) {
-            EmitOptions options; 
-            options.l3tol2 = true;
-            std::string ret = labeler_.make_fresh_label();
-            emitter_.line("mem rsp -8 <- " + ret);
-            emitter_.line("call " + (*i)->callee_->emit(options) + " " + std::to_string((*i)->args_.size()));
-            emitter_.line(ret);
-          } else if (c == CallType::print) {
-            emitter_.line("call print " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::input) {
-            emitter_.line("call input " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::allocate) {
-            emitter_.line("call allocate " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::tuple_error) {
-            emitter_.line("call tuple-error " + std::to_string((*i)->args_.size()));
-          } else if (c == CallType::tensor_error) {
-            emitter_.line("call tensor-error " + std::to_string((*i)->args_.size()));  
-          }
-          emitter_.line((*i)->dst_->emit() + " <- rax");
-        }
+      for (auto& nodePtr : ctx.trees) {
+        codegen(nodePtr);
       }
     }
     emitter_.line(")");
@@ -437,7 +423,6 @@ namespace L3 {
   void TilingEngine::tile(Program& p) {
     emitter_.line("(@main");
     for (auto* f : p.functions) {
-      if (!f) continue;
       tile_function(*f);
     }
     emitter_.line(")");

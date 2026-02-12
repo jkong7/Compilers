@@ -85,8 +85,6 @@ int main(
    */
   
   auto p = L3::parse_file(argv[optind]);
-
-  // Make context trees 
   make_trees(p);
   
   std::ofstream outputFile;

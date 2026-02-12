@@ -19,8 +19,6 @@ namespace L3 {
 
   // Enums 
 
-  // Consider making enum classes
-
   enum OP {plus, minus, times, at, left_shift, right_shift}; 
 
   enum CMP {less_than, less_than_equal, equal, greater_than_equal, greater_than}; 
@@ -28,27 +26,14 @@ namespace L3 {
   enum CallType {l3, print, input, allocate, tuple_error, tensor_error}; 
 
 
-
   // Items 
 
   enum ItemType { NumberItem, LabelItem, FuncItem, VariableItem }; 
 
-  struct EmitOptions {
-    bool l2tol1 = false; 
-    bool eightBitRegister = false; 
-    bool memoryStoredLabel = false; 
-    bool functionCall = false; 
-    bool indirectRegCall = false; 
-    bool livenessAnalysis = false; 
-    bool l3tol2 = false; 
-
-    const std::unordered_map<std::string, std::string>* coloring = nullptr; 
-  }; 
-
   class Item {
     public: 
       virtual ~Item() = default; 
-      virtual std::string emit(const EmitOptions& options = EmitOptions{}) const = 0; 
+      virtual std::string emit() const = 0; 
       virtual ItemType kind() const = 0; 
   };
 
@@ -56,7 +41,7 @@ namespace L3 {
   class Number : public Item {
     public:
       Number (int64_t n); 
-      std::string emit(const EmitOptions& options = EmitOptions{}) const override;
+      std::string emit() const override;
       ItemType kind() const override; 
 
       int64_t number_; 
@@ -66,7 +51,7 @@ namespace L3 {
   class Label : public Item {
     public: 
       Label (const std::string &s); 
-      std::string emit(const EmitOptions& options = EmitOptions{}) const override;
+      std::string emit() const override;
       ItemType kind() const override; 
 
       std::string label_; 
@@ -75,7 +60,7 @@ namespace L3 {
   class Func : public Item {
     public: 
       Func (const std::string &s); 
-      std::string emit(const EmitOptions& options = EmitOptions{}) const override;
+      std::string emit() const override;
       ItemType kind() const override; 
 
       std::string function_label_; 
@@ -84,7 +69,7 @@ namespace L3 {
   class Variable : public Item {
     public: 
       Variable (const std::string &s); 
-      std::string emit(const EmitOptions& options = EmitOptions{}) const override; 
+      std::string emit() const override; 
       ItemType kind() const override; 
 
       std::string var_; 
@@ -105,7 +90,7 @@ namespace L3 {
   using Node = std::variant<std::unique_ptr<Tree>, Instruction_label*, Instruction_call*, Instruction_call_assignment*>; 
 
   struct Context {
-    std::vector<Node> trees; 
+    std::vector<Node> nodes; 
   };
 
   /*

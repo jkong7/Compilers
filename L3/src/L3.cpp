@@ -48,38 +48,19 @@ ItemType Variable::kind() const {
 }
 
 
-std::string Number::emit(const EmitOptions& options) const {
+std::string Number::emit() const {
   return std::to_string(number_); 
 }
 
-std::string Label::emit(const EmitOptions& options) const {
-  if (options.l2tol1) {
-    return label_; 
-  }
-  std::string lname = label_.substr(1); 
-  std::ostringstream s; 
-  std::string prefix = options.memoryStoredLabel ? "$_" : "_"; 
-  s << prefix << lname;
-  return s.str(); 
+std::string Label::emit() const {
+  return ":" + label_.substr(1); 
 }
 
-std::string Func::emit(const EmitOptions& options) const {
-  if (options.l2tol1) {
-    return function_label_; 
-  }
-  std::string fname = function_label_.substr(1); 
-  std::ostringstream s; 
-  if (options.functionCall) {
-    s << "_" << fname; 
-  } else if (options.l3tol2) {
-    s << "@" << fname; 
-  } else {
-    s << "$_" << fname; 
-  }
-  return s.str(); 
+std::string Func::emit() const {
+  return "@" + function_label_.substr(1);
 }
 
-std::string Variable::emit(const EmitOptions& options) const {
+std::string Variable::emit() const {
   return var_; 
 }
 

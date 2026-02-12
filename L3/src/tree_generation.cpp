@@ -23,7 +23,7 @@ namespace L3 {
                 contexts.begin(), 
                 contexts.end(), 
                 [](const Context &s) {
-                    return s.trees.empty();
+                    return s.nodes.empty();
                 }
             ),
             contexts.end()
@@ -37,7 +37,7 @@ namespace L3 {
         std::unique_ptr<Tree> lhs = make_leaf(i.dst_); 
         std::unique_ptr<Tree> rhs = make_leaf(i.src_); 
         std::unique_ptr<Tree> assign_tree = make_assign(std::move(lhs), std::move(rhs)); 
-        contexts[cur_context].trees.push_back(std::move(assign_tree)); 
+        contexts[cur_context].nodes.push_back(std::move(assign_tree)); 
     }
 
     void ContextBehavior::act(Instruction_op& i) {
@@ -46,7 +46,7 @@ namespace L3 {
         std::unique_ptr<Tree> dst = make_leaf(i.dst_); 
         std::unique_ptr<Tree> binop_tree = make_binop(i.op_, std::move(lhs), std::move(rhs));
         std::unique_ptr<Tree> assign_tree = make_assign(std::move(dst), std::move(binop_tree));
-        contexts[cur_context].trees.push_back(std::move(assign_tree)); 
+        contexts[cur_context].nodes.push_back(std::move(assign_tree)); 
     }
 
     void ContextBehavior::act(Instruction_cmp& i) {
@@ -55,45 +55,45 @@ namespace L3 {
         std::unique_ptr<Tree> dst = make_leaf(i.dst_); 
         std::unique_ptr<Tree> cmp_tree = make_cmp(i.cmp_, std::move(lhs), std::move(rhs));
         std::unique_ptr<Tree> assign_tree = make_assign(std::move(dst), std::move(cmp_tree));
-        contexts[cur_context].trees.push_back(std::move(assign_tree));     
+        contexts[cur_context].nodes.push_back(std::move(assign_tree));     
     }
 
     void ContextBehavior::act(Instruction_load& i) {
         std::unique_ptr<Tree> lhs = make_leaf(i.dst_); 
         std::unique_ptr<Tree> rhs = make_leaf(i.src_);
         std::unique_ptr<Tree> load_tree = make_load(std::move(lhs), std::move(rhs));
-        contexts[cur_context].trees.push_back(std::move(load_tree));
+        contexts[cur_context].nodes.push_back(std::move(load_tree));
     }
 
     void ContextBehavior::act(Instruction_store& i) {
         std::unique_ptr<Tree> lhs = make_leaf(i.dst_); 
         std::unique_ptr<Tree> rhs = make_leaf(i.src_);
         std::unique_ptr<Tree> store_tree = make_store(std::move(lhs), std::move(rhs));
-        contexts[cur_context].trees.push_back(std::move(store_tree));    
+        contexts[cur_context].nodes.push_back(std::move(store_tree));    
     }
 
     void ContextBehavior::act(Instruction_return& i) {
         std::unique_ptr<Tree> return_tree = make_return(); 
-        contexts[cur_context].trees.push_back(std::move(return_tree));
+        contexts[cur_context].nodes.push_back(std::move(return_tree));
         end_context();
     }
 
     void ContextBehavior::act(Instruction_return_t& i) {
         std::unique_ptr<Tree> t = make_leaf(i.ret_);
         std::unique_ptr<Tree> return_tree = make_return(std::move(t)); 
-        contexts[cur_context].trees.push_back(std::move(return_tree));
+        contexts[cur_context].nodes.push_back(std::move(return_tree));
         end_context();
     }
 
     void ContextBehavior::act(Instruction_label& i) {
-        contexts[cur_context].trees.push_back(&i);
+        contexts[cur_context].nodes.push_back(&i);
         end_context();
     }
 
     void ContextBehavior::act(Instruction_break_label& i) {
         std::unique_ptr<Tree> label = make_leaf(i.label_);
         std::unique_ptr<Tree> break_tree = make_break(std::move(label));
-        contexts[cur_context].trees.push_back(std::move(break_tree));
+        contexts[cur_context].nodes.push_back(std::move(break_tree));
         end_context();
     }
 
@@ -101,17 +101,17 @@ namespace L3 {
         std::unique_ptr<Tree> label = make_leaf(i.label_);
         std::unique_ptr<Tree> t = make_leaf(i.t_);
         std::unique_ptr<Tree> break_tree = make_break(std::move(label), std::move(t));
-        contexts[cur_context].trees.push_back(std::move(break_tree));
+        contexts[cur_context].nodes.push_back(std::move(break_tree));
         end_context();
     }
 
     void ContextBehavior::act(Instruction_call& i) {
-        contexts[cur_context].trees.push_back(&i);
+        contexts[cur_context].nodes.push_back(&i);
         end_context();
     }
 
     void ContextBehavior::act(Instruction_call_assignment& i) {
-        contexts[cur_context].trees.push_back(&i);
+        contexts[cur_context].nodes.push_back(&i);
         end_context(); 
     }
 
@@ -248,19 +248,19 @@ namespace L3 {
     const auto& ctxs = cur_function_->contexts;
 
     for (size_t ci = 0; ci < ctxs.size(); ++ci) {
-        std::cout << "\n[Context " << ci << "] trees=" << ctxs[ci].trees.size() << "\n";
-        for (size_t ti = 0; ti < ctxs[ci].trees.size(); ++ti) {
+        std::cout << "\n[Context " << ci << "] trees=" << ctxs[ci].nodes.size() << "\n";
+        for (size_t ti = 0; ti < ctxs[ci].nodes.size(); ++ti) {
         std::cout << "  (Tree " << ti << ")\n";
-        if (auto* t = std::get_if<std::unique_ptr<Tree>>(&ctxs[ci].trees[ti])) {
+        if (auto* t = std::get_if<std::unique_ptr<Tree>>(&ctxs[ci].nodes[ti])) {
             if (t->get()) {
-                print_tree_rec(t->get(), 4, std::cout);
+            print_tree_rec(t->get(), 4, std::cout);
             }
-        } else if (auto *i = std::get_if<Instruction_label*>(&ctxs[ci].trees[ti])) {
-            std::cout << "  " << "LABEL instruction";
-        } else if (auto *i = std::get_if<Instruction_call*>(&ctxs[ci].trees[ti])) {
-            std::cout << "  " << "CALL instruction";
-        } else if (auto *i = std::get_if<Instruction_call_assignment*>(&ctxs[ci].trees[ti])) {
-            std::cout << "  " << "CALL assignment instruction";
+        } else if (auto *i = std::get_if<Instruction_label*>(&ctxs[ci].nodes[ti])) {
+            std::cout << "  " << "LABEL instruction\n";
+        } else if (auto *i = std::get_if<Instruction_call*>(&ctxs[ci].nodes[ti])) {
+            std::cout << "  " << "CALL instruction\n";
+        } else if (auto *i = std::get_if<Instruction_call_assignment*>(&ctxs[ci].nodes[ti])) {
+            std::cout << "  " << "CALL assignment instruction\n";
         }
         }
     }
