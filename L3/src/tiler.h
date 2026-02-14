@@ -47,67 +47,6 @@ namespace L3 {
 };
 
 
-  class Tile {
-  public:
-    virtual ~Tile() = default;
-
-    virtual bool match(const Tree& t, Match& m) = 0;
-    virtual int cost() = 0;
-    virtual void emit(const Match& m, Emitter& e, GlobalLabel& labeler) = 0;
-  };
-
-  class AssignTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class AssignBinOpTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class AssignCmpTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class LoadTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class StoreTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class ReturnTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-  class BreakTile : public Tile {
-    public: 
-      bool match(const Tree& t, Match& m) override; 
-      int cost() override; 
-      void emit(const Match& m, Emitter& e, GlobalLabel& labeler) override;
-  };
-
-
-
-
 
   class TilingEngine {
   public:
@@ -115,7 +54,6 @@ namespace L3 {
     void tile(Program& p);
 
   private:
-    void add_tile(std::unique_ptr<Tile> t);
 
     void tile_function(Function& f);
 
@@ -125,11 +63,12 @@ namespace L3 {
     void handle_call(const CallT* call);
 
     void tile_tree(const Tree& t);
-    Tile* select_best_tile(const Tree& t, Match& out_match) const;
+
+
+    std::string lower_expr(const Tree* t);
 
     Emitter emitter_;
     GlobalLabel labeler_; 
-    std::vector<std::unique_ptr<Tile>> tiles_;
   };
 
   void tile_program(Program& p, std::ostream& out);

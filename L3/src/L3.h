@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
 #include <string>
 #include <cstdint>
@@ -217,12 +218,21 @@ namespace L3 {
   };
 
 
+  struct livenessSets {
+    std::unordered_set<std::string> gen; 
+    std::unordered_set<std::string> kill; 
+    std::unordered_set<std::string> in; 
+    std::unordered_set<std::string> out; 
+  };
+
+
   class Function{
     public:
       std::string name;
       std::vector<Variable*> var_arguments;
       std::vector<Instruction *> instructions;
       std::vector<Context> contexts; 
+      std::vector<livenessSets> liveness_data; 
 
       void accept(Behavior& b);
 

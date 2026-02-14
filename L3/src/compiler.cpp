@@ -19,6 +19,8 @@
 #include <parser.h>
 #include <behavior.h>
 #include <tree_generation.h>
+#include <liveness_analysis.h>
+#include <merge_trees.h>
 #include <tiler.h> 
 
 std::string read_file(const char *path) {
@@ -80,12 +82,10 @@ int main(
   }
 
 
-  /*
-   * Parse the input file.
-   */
-  
   auto p = L3::parse_file(argv[optind]);
   make_trees(p);
+  analyze_liveness(p);
+  merge_trees(p);
   
   std::ofstream outputFile;
   outputFile.open("prog.L2");

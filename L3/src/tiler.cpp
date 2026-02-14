@@ -106,248 +106,170 @@ namespace L3 {
 
 
 
-  bool AssignTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Assign) return false; 
-    const Tree* dst = ptr(t.lhs); 
-    const Tree* src = ptr(t.rhs);
-    if (!dst || !src) return false; 
-    if (!is_leaf(*dst) || !is_leaf(*src)) return false; 
-
-    m.node = &t; 
-    m.dst = dst; 
-    m.rhs = src; 
-    return true; 
-  }
-
-  int AssignTile::cost() {
-    return 1; 
-  } 
-
-  void AssignTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
-    e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs));
-  } 
-
-
-  bool AssignBinOpTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Assign) return false; 
-    const Tree* dst = ptr(t.lhs); 
-    const Tree* binOp = ptr(t.rhs);
-    if (!dst || !binOp) return false; 
-    if (!is_leaf(*dst)) return false; 
-
-    if (binOp->kind != TreeType::BinOp) return false; 
-    if (!binOp->binOp.has_value()) return false; 
-    const Tree* lhs = ptr(binOp->lhs); 
-    const Tree* rhs = ptr(binOp->rhs);
-    if (!lhs || !rhs) return false; 
-    if (!is_leaf(*lhs) || !is_leaf(*rhs)) return false;
-
-    m.node = &t; 
-    m.dst = dst; 
-    m.lhs = lhs; 
-    m.rhs = rhs; 
-    m.op = binOp -> binOp; 
-    return true; 
-  }
-
-  int AssignBinOpTile::cost() {
-    return 1; 
-  }
-
-  void AssignBinOpTile::emit(const Match& m, Emitter& e, GlobalLabel&) {
-    auto dst = leaf_node_to_str(m.dst);
-    auto lhs = leaf_node_to_str(m.lhs);
-    auto rhs = leaf_node_to_str(m.rhs);
-    auto op  = std::string(op_to_str(m.op.value()));
-
-    if (dst == lhs) {
-      // x <- x op y  => x op= y
-      e.line(dst + " " + op + " " + rhs);
-      return;
-    }
-
-    if (dst == rhs) {
-      // x <- y op x  => need temp
-      std::string tmp = e.fresh_tmp();  
-      e.line(tmp + " <- " + rhs);
-      e.line(dst + " <- " + lhs);
-      e.line(dst + " " + op + " " + tmp);
-      return;
-    }
-
-    // general safe case
-    e.line(dst + " <- " + lhs);
-    e.line(dst + " " + op + " " + rhs);
-  }
-
-
-
-  bool AssignCmpTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Assign) return false; 
-    const Tree* dst = ptr(t.lhs); 
-    const Tree* cmp = ptr(t.rhs);
-    if (!dst || !cmp) return false; 
-    if (!is_leaf(*dst)) return false; 
-
-    if (cmp->kind != TreeType::Cmp) return false; 
-    if (!cmp->cmp.has_value()) return false; 
-    const Tree* lhs = ptr(cmp->lhs); 
-    const Tree* rhs = ptr(cmp->rhs);
-    if (!lhs || !rhs) return false; 
-    if (!is_leaf(*lhs) || !is_leaf(*rhs)) return false;
-
-    m.node = &t; 
-    m.dst = dst; 
-    m.lhs = lhs; 
-    m.rhs = rhs; 
-    m.cmp = cmp -> cmp; 
-    return true; 
-  }
-
-  int AssignCmpTile::cost() {
-    return 1; 
-  }
-
-  void AssignCmpTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) { 
-    if (cmp_to_str(m.cmp.value()) == ">") {
-      e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs) + " " + "<" + " " + leaf_node_to_str(m.lhs));
-    } else if (cmp_to_str(m.cmp.value()) == ">=") {
-      e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.rhs) + " " + "<=" + " " + leaf_node_to_str(m.lhs));
-    } else {
-      e.line(leaf_node_to_str(m.dst) + " <- " + leaf_node_to_str(m.lhs) + " " + cmp_to_str(m.cmp.value()) + " " + leaf_node_to_str(m.rhs));
-    }
-  }
-
-  bool LoadTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Load) return false; 
-    const Tree* dst = ptr(t.lhs); 
-    const Tree* src = ptr(t.rhs); 
-    if (!dst || !src) return false; 
-    if (!is_leaf(*dst) || !is_leaf(*src)) return false; 
-      m.node = &t;
-      m.dst  = dst;
-      m.rhs  = src;
-      return true;
-  }
-
-  int LoadTile::cost() {
-    return 1; 
-  } 
-
-  void LoadTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
-    e.line(leaf_node_to_str(m.dst) + " <- " + "mem " + leaf_node_to_str(m.rhs) + " 0");
-  }
-
-
-  bool StoreTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Store) return false; 
-    const Tree* dst = ptr(t.lhs); 
-    const Tree* src = ptr(t.rhs); 
-    if (!dst || !src) return false; 
-    if (!is_leaf(*dst) || !is_leaf(*src)) return false; 
-      m.node = &t;
-      m.dst  = dst;
-      m.rhs  = src;
-      return true;
-  }
-
-  int StoreTile::cost() {
-    return 1; 
-  } 
-
-  void StoreTile::emit(const Match& m, Emitter& e, GlobalLabel& labeler) {
-    e.line("mem " + leaf_node_to_str(m.dst) + " 0" + " <- " + leaf_node_to_str(m.rhs)); 
-  }
-
-  bool ReturnTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Return) return false; 
-    if (t.lhs) {
-      if (!is_leaf(*t.lhs)) return false; 
-      m.lhs = ptr(t.lhs); 
-    }
-    m.node = &t; 
-    return true; 
-  }
-
-  int ReturnTile::cost() {
-    return 1;
-  }
-
-  void ReturnTile::emit(const Match& m, Emitter &e, GlobalLabel& labeler) {
-    if (m.lhs) {
-      e.line("rax <- " + leaf_node_to_str(m.lhs));
-    }
-    e.line("return"); 
-  }
-
-  bool BreakTile::match(const Tree& t, Match& m) {
-    if (t.kind != TreeType::Break) return false; 
-    const Tree* label = ptr(t.lhs);
-    if (t.rhs) {
-      if (!is_leaf(*t.rhs)) return false; 
-      m.rhs = ptr(t.rhs);
-    }
-    m.node = &t; 
-    m.lhs = label; 
-    return true; 
-  }
-
-  int BreakTile::cost() {
-    return 1; 
-  }
-
-  void BreakTile::emit(const Match& m, Emitter &e, GlobalLabel& labeler) {
-    if (m.rhs) {
-      e.line("cjump " + leaf_node_to_str(m.rhs) + " = 1 " + labeler.make_label(leaf_node_to_str(m.lhs)));
-    } else {
-      e.line("goto " + labeler.make_label(leaf_node_to_str(m.lhs))); 
-    }
-  }
-
-
-
-
   TilingEngine::TilingEngine(std::ostream& out, GlobalLabel& labeler)
     : emitter_(out), labeler_(labeler) {
-    add_tile(std::make_unique<AssignBinOpTile>());
-    add_tile(std::make_unique<AssignCmpTile>());
-    add_tile(std::make_unique<AssignTile>());
-    add_tile(std::make_unique<LoadTile>());
-    add_tile(std::make_unique<StoreTile>());
-    add_tile(std::make_unique<ReturnTile>());
-    add_tile(std::make_unique<BreakTile>());
   }
 
-  void TilingEngine::add_tile(std::unique_ptr<Tile> t) {
-    tiles_.push_back(std::move(t));
-  }
+std::string TilingEngine::lower_expr(const Tree* t) {
 
-  Tile* TilingEngine::select_best_tile(const Tree& t, Match& out_match) const {
-    Tile* best = nullptr;
-    int best_cost = 1e9;
+  switch (t->kind) {
+    case TreeType::Leaf: {
+      return leaf_node_to_str(t);
+    }
 
-    for (const auto& tile : tiles_) {
-      Match m{};
-      if (!tile->match(t, m)) continue;
-      int c = tile->cost();
-      if (c < best_cost) {
-        best = tile.get();
-        best_cost = c;
-        out_match = m;
+    case TreeType::BinOp: {
+      assert(t->binOp.has_value());
+      const Tree* lhs = ptr(t->lhs);
+      const Tree* rhs = ptr(t->rhs);
+      assert(lhs && rhs);
+
+      std::string l = lower_expr(lhs);
+      std::string r = lower_expr(rhs);
+
+      std::string tmp = emitter_.fresh_tmp();
+      emitter_.line(tmp + " <- " + l);
+      emitter_.line(tmp + " " + op_to_str(*t->binOp) + " " + r);
+      return tmp;
+    }
+
+    case TreeType::Cmp: {
+      assert(t->cmp.has_value());
+      const Tree* lhs = ptr(t->lhs);
+      const Tree* rhs = ptr(t->rhs);
+      assert(lhs && rhs);
+
+      std::string l = lower_expr(lhs);
+      std::string r = lower_expr(rhs);
+
+      std::string tmp = emitter_.fresh_tmp();
+      CMP c = *t->cmp;
+
+      std::string L = l;
+      std::string R = r;
+      const char* op_str = nullptr;
+
+      switch (c) {
+        case less_than:
+        case less_than_equal:
+        case equal:
+          op_str = cmp_to_str(c);  
+          break;
+
+        case greater_than:
+          op_str = "<";       
+          std::swap(L, R);
+          break;
+
+        case greater_than_equal:
+          op_str = "<=";           
+          std::swap(L, R);
+          break;
       }
+
+      emitter_.line(tmp + " <- " + L + " " + op_str + " " + R);
+      return tmp;
     }
-    return best;
+
+    case TreeType::Load: {
+      const Tree* dst = ptr(t->lhs);
+      const Tree* src = ptr(t->rhs);
+      assert(src && "Load must have address (rhs)");
+
+      std::string addr = lower_expr(src);
+
+      std::string tmp;
+      if (dst && is_leaf(*dst)) {
+        tmp = leaf_node_to_str(dst);
+      } else {
+        tmp = emitter_.fresh_tmp();
+      }
+
+      emitter_.line(tmp + " <- mem " + addr + " 0");
+      return tmp;
+    }
+
+    case TreeType::Assign:
+    case TreeType::Store:
+    case TreeType::Return:
+    case TreeType::Break:
+      return "";
   }
 
-  void TilingEngine::tile_tree(const Tree& t) {
-    Match m{};
-    Tile* tile = select_best_tile(t, m);
-    if (!tile) {
-      std::cerr << "No tile matched tree kind=" << static_cast<int>(t.kind) << "\n";
-      assert(false);
+  return "";
+}
+
+
+
+void TilingEngine::tile_tree(const Tree& t) {
+  switch (t.kind) {
+    case TreeType::Assign: {
+      const Tree* dstNode = ptr(t.lhs);
+      const Tree* rhsNode = ptr(t.rhs);
+      assert(dstNode && rhsNode);
+      assert(is_leaf(*dstNode) && "Assign lhs should be a leaf variable");
+
+      std::string dst = leaf_node_to_str(dstNode);
+      std::string val = lower_expr(rhsNode);
+      emitter_.line(dst + " <- " + val);
+      break;
     }
-    tile->emit(m, emitter_, labeler_);
+
+    case TreeType::Load: {
+      const Tree* dstNode = ptr(t.lhs);
+      const Tree* srcNode = ptr(t.rhs);
+      assert(dstNode && srcNode);
+      assert(is_leaf(*dstNode) && "Load lhs should be a leaf variable");
+
+      std::string dst  = leaf_node_to_str(dstNode);
+      std::string addr = lower_expr(srcNode);
+      emitter_.line(dst + " <- mem " + addr + " 0");
+      break;
+    }
+
+    case TreeType::Store: {
+      const Tree* addrNode = ptr(t.lhs);
+      const Tree* valNode  = ptr(t.rhs);
+      assert(addrNode && valNode);
+
+      std::string addr = lower_expr(addrNode);
+      std::string val  = lower_expr(valNode);
+      emitter_.line("mem " + addr + " 0 <- " + val);
+      break;
+    }
+
+    case TreeType::Return: {
+      if (t.lhs) {
+        std::string val = lower_expr(ptr(t.lhs));
+        emitter_.line("rax <- " + val);
+      }
+      emitter_.line("return");
+      break;
+    }
+
+    case TreeType::Break: {
+      const Tree* labelNode = ptr(t.lhs);
+      assert(labelNode && is_leaf(*labelNode));
+      std::string labelName   = leaf_node_to_str(labelNode);
+      std::string globalLabel = labeler_.make_label(labelName);
+
+      if (t.rhs) {
+        std::string cond = lower_expr(ptr(t.rhs));
+        emitter_.line("cjump " + cond + " = 1 " + globalLabel);
+      } else {
+        emitter_.line("goto " + globalLabel);
+      }
+      break;
+    }
+
+    case TreeType::Leaf:
+    case TreeType::BinOp:
+    case TreeType::Cmp: {
+      (void) lower_expr(&t);
+      break;
+    }
   }
+}
+
 
   void TilingEngine::initialize_function_args(const std::vector<Variable*> var_arguments) {
     std::vector<Variable*> vars = var_arguments;
@@ -413,7 +335,7 @@ namespace L3 {
     emitter_.line("(" + f.name);
     initialize_function_args(f.var_arguments);
     for (const auto& ctx : f.contexts) {
-      for (auto& nodePtr : ctx.trees) {
+      for (auto& nodePtr : ctx.nodes) {
         codegen(nodePtr);
       }
     }
