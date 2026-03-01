@@ -54,6 +54,8 @@ namespace IR {
   BasicBlock* current_bb = nullptr;
 
   bool parsing_params = false;
+  bool parsing_indexes = false;
+  size_t index_begin = 0;
   size_t args_begin = 0;
 
   OP last_op;
@@ -455,8 +457,11 @@ namespace IR {
       str_new,
       spaces,
       str_Tuple,
+      spaces,
       str_args_left_paren,
+      spaces,
       t_rule,
+      spaces,
       str_args_right_paren
     > {};
 
@@ -603,7 +608,6 @@ namespace IR {
     }
   };
 
-  // CHANGED (necessary): reset dims at start of parsing a type token
   template<> struct action< str_int64 > {
     template<typename Input>
     static void apply(const Input&, Program&) {
@@ -612,7 +616,6 @@ namespace IR {
     }
   };
 
-  // CHANGED (necessary): set cur_type for tuple/code and avoid stale dims/type
   template<> struct action< str_tuple > {
     template<typename Input>
     static void apply(const Input&, Program&) {
@@ -677,15 +680,16 @@ namespace IR {
     }
   };
 
-  // REMOVED (necessary): do NOT reset args_begin per '['
-  // template<> struct action< str_index_left_bracket > { ... }
-
-  // CHANGED (necessary): set args_begin once per whole index list
-  template<> struct action< index_list_rule > {
-    static void apply0(Program&) {
-      args_begin = parsed_items.size();
+  template<> struct action< str_index_left_bracket > {
+    template<typename Input>
+    static void apply(const Input&, Program&) {
+      if (!parsing_indexes) {
+        parsing_indexes = true;
+        index_begin = parsed_items.size();   
+      }
     }
   };
+
 
   // Basic block actions
   template<> struct action< bb_label_rule > {
@@ -715,6 +719,8 @@ namespace IR {
 
       if (parsing_params && current_function) {
         current_function->var_arguments.push_back(v);
+        current_function->variable_types[v->var_] = {cur_type, cur_int64_dims}; 
+        cur_int64_dims = 0;
       }
     }
   };
@@ -823,14 +829,23 @@ namespace IR {
   template<> struct action< Instruction_index_load_rule > {
     template<typename Input>
     static void apply(const Input&, Program&) {
-      std::vector<Item*> args;
-      for (size_t i = args_begin; i < parsed_items.size(); ++i) args.push_back(parsed_items[i]);
-      parsed_items.resize(args_begin);
+
+      std::vector<Item*> idxs;
+      if (!parsing_indexes) {
+        index_begin = parsed_items.size();
+      }
+      for (size_t i = index_begin; i < parsed_items.size(); ++i) idxs.push_back(parsed_items[i]);
+      parsed_items.resize(index_begin);
+
+      parsing_indexes = false;
+      index_begin = 0;
 
       auto* src = static_cast<Variable*>(parsed_items.back()); parsed_items.pop_back();
       auto* dst = static_cast<Variable*>(parsed_items.back()); parsed_items.pop_back();
 
-      current_bb->instructions.push_back(new Instruction_index_load(dst, src, std::move(args)));
+      current_bb->instructions.push_back(
+        new Instruction_index_load(dst, src, std::move(idxs))
+      );
 
       PARSER_PRINT("Index load instruction");
     }
@@ -839,15 +854,26 @@ namespace IR {
   template<> struct action< Instruction_index_store_rule > {
     template<typename Input>
     static void apply(const Input&, Program&) {
-      auto* src = static_cast<Variable*>(parsed_items.back()); parsed_items.pop_back();
 
-      std::vector<Item*> args;
-      for (size_t i = args_begin; i < parsed_items.size(); ++i) args.push_back(parsed_items[i]);
-      parsed_items.resize(args_begin);
+      Item* src = parsed_items.back(); 
+      parsed_items.pop_back();
 
-      auto* dst = static_cast<Variable*>(parsed_items.back()); parsed_items.pop_back();
+      std::vector<Item*> idxs;
+      if (!parsing_indexes) {
+        index_begin = parsed_items.size();
+      }
+      for (size_t i = index_begin; i < parsed_items.size(); ++i) idxs.push_back(parsed_items[i]);
+      parsed_items.resize(index_begin);
 
-      current_bb->instructions.push_back(new Instruction_index_store(dst, std::move(args), src));
+      parsing_indexes = false;
+      index_begin = 0;
+
+      auto* dst = static_cast<Variable*>(parsed_items.back()); 
+      parsed_items.pop_back();
+
+      current_bb->instructions.push_back(
+        new Instruction_index_store(dst, std::move(idxs), src)
+      );
 
       PARSER_PRINT("Index store instruction");
     }
@@ -915,15 +941,26 @@ namespace IR {
   };
 
   template<> struct action< Instruction_new_array_rule > {
+
+    template<typename Input>
+    static void apply0(const Input&, Program&) {
+      args_begin = parsed_items.size();
+    }
+
     template<typename Input>
     static void apply(const Input&, Program&) {
       std::vector<Item*> args;
-      for (size_t i = args_begin; i < parsed_items.size(); ++i) args.push_back(parsed_items[i]);
+      for (size_t i = args_begin; i < parsed_items.size(); ++i)
+        args.push_back(parsed_items[i]);
+
       parsed_items.resize(args_begin);
 
-      auto* dst = static_cast<Variable*>(parsed_items.back()); parsed_items.pop_back();
+      auto* dst = static_cast<Variable*>(parsed_items.back());
+      parsed_items.pop_back();
 
-      current_bb->instructions.push_back(new Instruction_new_array(dst, std::move(args)));
+      current_bb->instructions.push_back(
+        new Instruction_new_array(dst, std::move(args))
+      );
 
       PARSER_PRINT("New array instruction");
     }
@@ -986,6 +1023,12 @@ namespace IR {
   };
 
   Program parse_file(char *fileName) {
+    parsed_items.clear();        
+    current_function = nullptr;
+    current_bb = nullptr;
+    parsing_params = false;
+    args_begin = 0;
+    cur_int64_dims = 0;
 
     /*
      * Check the grammar for some possible issues.

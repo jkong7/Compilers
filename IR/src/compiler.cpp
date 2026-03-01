@@ -18,6 +18,7 @@
 
 #include <parser.h>
 #include <behavior.h>
+#include <codegen.h>
 
 std::string read_file(const char *path) {
   std::ifstream in(path);
@@ -80,6 +81,7 @@ int main(
 
   auto p = IR::parse_file(argv[optind]);
   p.linearize_bb();
+  generate_code(p);
 
 
   return 0;

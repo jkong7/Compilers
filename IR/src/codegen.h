@@ -7,6 +7,7 @@
 #include <vector> 
 #include <sstream> 
 #include <tuple> 
+#include <fstream>
 #include <IR.h>
 #include <behavior.h> 
 
@@ -15,7 +16,7 @@ namespace IR{
 
   class CodeGenBehavior : public Behavior {
   public:
-    CodeGenBehavior() = default;
+    CodeGenBehavior(std::ofstream &o); 
 
     void act(Program& p) override;
     void act(Function& f) override;
@@ -41,6 +42,17 @@ namespace IR{
 
     void act(Instruction_return& i) override;
     void act(Instruction_return_t& i) override;
+
+  private: 
+    std::string temp(); 
+
+    Function* cur_function = nullptr;
+    BasicBlock* cur_bb = nullptr;
+    BasicBlock* next_bb = nullptr;
+    int temp_counter = 0; 
+    std::ofstream &out; 
   };
+
+  void generate_code(Program& p);
 
 }
